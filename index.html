@@ -148,4 +148,100 @@
 </div>
 
 <script>
-  //
+  // ※本来はデータベースで管理しますが、今回はテスト用にブラウザのメモリに保存します。
+  const mockDatabase = {}; 
+  let selectedUser = "";
+
+  // 画面を切り替える関数
+  function showStep(stepId) {
+    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+    
+    // 入力欄をリセット
+    if(stepId === 'step-name') {
+      document.getElementById('password-input').value = "";
+      document.getElementById('school-hour-input').value = "";
+      document.getElementById('school-minute-input').value = "";
+      document.getElementById('self-hour-input').value = "";
+      document.getElementById('self-minute-input').value = "";
+    }
+  }
+
+  // 「つぎへ」ボタン（名前選択後）
+  function goToPassword() {
+    selectedUser = document.getElementById('user-select').value;
+    if (selectedUser === "") {
+      alert("なまえをえらんでね！");
+      return;
+    }
+    const msg = document.getElementById('password-message');
+    // すでにパスワードが登録されているかチェック
+    if (mockDatabase[selectedUser]) {
+      msg.innerHTML = "パスワードを入れてね<br>（4ケタのすうじ）";
+    } else {
+      msg.innerHTML = "<b>【はじめてのログイン】</b><br>自分だけのパスワード（4ケタ）を決めて入力してね。";
+    }
+    showStep('step-password');
+  }
+
+  // 「OK」ボタン（パスワード確認）
+  function checkPassword() {
+    const passInput = document.getElementById('password-input').value;
+    if (passInput.length !== 4) {
+      alert("パスワードは4ケタのすうじにしてね！");
+      return;
+    }
+    if (mockDatabase[selectedUser]) {
+      // 登録済みの場合：答え合わせ
+      if (mockDatabase[selectedUser] === passInput) {
+        showStep('step-input'); 
+      } else {
+        alert("パスワードがちがいます。");
+      }
+    } else {
+      // 未登録の場合：新規登録
+      mockDatabase[selectedUser] = passInput;
+      alert("パスワードを登録しました！わすれないようにね。");
+      showStep('step-input');
+    }
+  }
+
+  // 「記録する！」ボタン
+  function submitData() {
+    const date = document.getElementById('date-input').value;
+    
+    // 学業に関わる時間
+    const schoolHour = document.getElementById('school-hour-input').value || 0;
+    const schoolMinute = document.getElementById('school-minute-input').value || 0;
+    const schoolTotalMinutes = parseInt(schoolHour) * 60 + parseInt(schoolMinute);
+
+    // それ以外の自主学習
+    const selfHour = document.getElementById('self-hour-input').value || 0;
+    const selfMinute = document.getElementById('self-minute-input').value || 0;
+    const selfTotalMinutes = parseInt(selfHour) * 60 + parseInt(selfMinute);
+
+    if (!date) {
+      alert("日付をえらんでね！");
+      return;
+    }
+    // どちらも0分だった場合のエラーチェック
+    if (schoolTotalMinutes === 0 && selfTotalMinutes === 0) {
+      alert("どちらかの時間を入力してね！");
+      return;
+    }
+
+    // --- ここで本来はGoogleスプレッドシート（GAS）等にデータを送ります ---
+    console.log("送信データ:", {
+      user: selectedUser,
+      date: date,
+      schoolStudyTime: schoolTotalMinutes,
+      selfStudyTime: selfTotalMinutes
+    });
+    // --------------------------------------------------------
+
+    showStep('step-complete');
+  }
+</script>
+
+</body>
+</html>
