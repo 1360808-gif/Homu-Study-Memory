@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学習きろくアプリ（プロトタイプ）</title>
+<style>
+  /* ＝ タブレット向けの全体デザイン ＝ */
+  body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background-color: #f0f8ff; /* 優しい水色 */
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  .app-container {
+    background: #fff;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    padding: 30px;
+    text-align: center;
+  }
+  h1 {
+    font-size: 24px;
+    color: #2c3e50;
+    margin-bottom: 30px;
+  }
+  /* ＝ 画面の切り替え用 ＝ */
+  .step {
+    display: none; /* 最初はすべて非表示 */
+  }
+  .step.active {
+    display: block; /* activeクラスがついたものだけ表示 */
+  }
+  /* ＝ フォーム・ボタンのデザイン（子供が押しやすいように大きく） ＝ */
+  select, input {
+    width: 100%;
+    padding: 15px;
+    font-size: 20px;
+    border: 2px solid #bdc3c7;
+    border-radius: 10px;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+  }
+  .time-input-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .time-input-container input {
+    width: 45%;
+    margin-bottom: 0;
+  }
+  .time-input-container span {
+    font-size: 20px;
+    align-self: center;
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #3498db;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: background-color 0.2s;
+  }
+  button:active {
+    background-color: #2980b9;
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .back-btn {
+    background-color: #95a5a6;
+    margin-top: 15px;
+  }
+  .back-btn:active {
+    background-color: #7f8c8d;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <h1>✏️ クラス学習きろく</h1>
+
+  <div id="step-name" class="step active">
+    <p>自分の名前をえらんでね</p>
+    <select id="user-select">
+      <option value="">-- なまえをえらぶ --</option>
+      <option value="1">1番: 青木 太郎</option>
+      <option value="2">2番: 伊藤 花子</option>
+      <option value="3">3番: 宇田川 健太</option>
+    </select>
+    <button onclick="goToPassword()">つぎへ</button>
+  </div>
+
+  <div id="step-password" class="step">
+    <p id="password-message">パスワード（4ケタのすうじ）</p>
+    <input type="password" id="password-input" placeholder="****" maxlength="4" inputmode="numeric">
+    <button onclick="checkPassword()">OK</button>
+    <button class="back-btn" onclick="showStep('step-name')">もどる</button>
+  </div>
+
+  <div id="step-input" class="step">
+    <p>今週のがんばりを記録しよう！</p>
+    <p style="font-size: 14px; color: #666; text-align: left; margin-bottom: 5px;">いつから？</p>
+    <input type="date" id="date-input">
+    
+    <p style="font-size: 14px; color: #666; text-align: left; margin-bottom: 5px;">どれくらい？</p>
+    <div class="time-input-container">
+      <input type="number" id="hour-input" min="0" placeholder="0"> <span>時間</span>
+      <input type="number" id="minute-input" min="0" max="59" placeholder="0"> <span>分</span>
+    </div>
+    <button onclick="submitData()" style="background-color: #2ecc71;">記録する！</button>
+    <button class="back-btn" onclick="showStep('step-name')">はじめから</button>
+  </div>
+
+  <div id="step-complete" class="step">
+    <h2>🎉 記録完了！</h2>
+    <p>よくがんばりました！<br>みんなのグラフを見てみよう。</p>
+    <button onclick="showStep('step-name')">最初の画面にもどる</button>
+  </div>
+
+</div>
+
+<script>
+  // ※本来はデータベースで管理しますが、今回はテスト用にブラウザのメモリに保存します。
+  const mockDatabase = {}; // 例: { "1": "1234" } (出席番号とパスワードのペア)
+  let selectedUser = "";
+
+  // 画面を切り替える関数
+  function showStep(stepId) {
+    document.querySelectorAll('.step').forEach(step => {
+      step.classList.remove('active');
+    });
+    document.getElementById(stepId).classList.add('active');
+    
+    // 入力欄をリセット
+    if(stepId === 'step-name') {
+      document.getElementById('password-input').value = "";
+      document.getElementById('hour-input').value = "";
+      document.getElementById('minute-input').value = "";
+    }
+  }
+
+  // 「つぎへ」ボタン（名前選択後）
+  function goToPassword() {
+    selectedUser = document.getElementById('user-select').value;
+    if (selectedUser === "") {
+      alert("なまえをえらんでね！");
+      return;
+    }
+
+    const msg = document.getElementById('password-message');
+    // すでにパスワードが登録されているかチェック
+    if (mockDatabase[selectedUser]) {
+      msg.innerHTML = "パスワードを入れてね<br>（4ケタのすうじ）";
+    } else {
+      msg.innerHTML = "<b>【はじめてのログイン】</b><br>自分だけのパスワード（4ケタ）を決めて入力してね。";
+    }
+    showStep('step-password');
+  }
+
+  // 「OK」ボタン（パスワード確認）
+  function checkPassword() {
+    const passInput = document.getElementById('password-input').value;
+    
+    if (passInput.length !== 4) {
+      alert("パスワードは4ケタのすうじにしてね！");
+      return;
+    }
+
+    if (mockDatabase[selectedUser]) {
+      // 登録済みの場合：答え合わせ
+      if (mockDatabase[selectedUser] === passInput) {
+        showStep('step-input'); // 成功！入力画面へ
+      } else {
+        alert("パスワードがちがいます。");
+      }
+    } else {
+      // 未登録の場合：新規登録
+      mockDatabase[selectedUser] = passInput;
+      alert("パスワードを登録しました！わすれないようにね。");
+      showStep('step-input');
+    }
+  }
+
+  // 「記録する！」ボタン
+  function submitData() {
+    const date = document.getElementById('date-input').value;
+    const hour = document.getElementById('hour-input').value || 0; // 空なら0にする
+    const minute = document.getElementById('minute-input').value || 0;
+
+    if (!date) {
+      alert("日付をえらんでね！");
+      return;
+    }
+    if (hour == 0 && minute == 0) {
+      alert("時間を入力してね！");
+      return;
+    }
+
+    // --- ここで本来はGoogleスプレッドシート（GAS）等にデータを送ります ---
+    console.log("送信データ:", {
+      user: selectedUser,
+      date: date,
+      time: parseInt(hour) * 60 + parseInt(minute) // 全て「分」に変換して保存すると後で計算しやすいです
+    });
+    // --------------------------------------------------------
+
+    showStep('step-complete');
+  }
+</script>
+
+</body>
+</html>
