@@ -46,10 +46,15 @@
     gap: 10px;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
   }
   .controls select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #bdc3c7; cursor: pointer; }
   
-  .note { font-size: 13px; color: #e74c3c; margin-bottom: 15px; text-align: left; font-weight: bold; background: #fdf2e9; padding: 10px; border-radius: 5px;}
+  .note { 
+    font-size: 13.5px; color: #2c3e50; margin-bottom: 15px; text-align: left; 
+    background: #e8f8f5; padding: 12px; border-radius: 8px; border-left: 5px solid #1abc9c;
+    line-height: 1.5;
+  }
 
   .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 20px; }
   .chart-container { position: relative; height: 400px; min-width: 800px; }
@@ -72,17 +77,22 @@
   </div>
 
   <div class="controls">
-    <label style="font-weight: bold; color: #2980b9;">どんな順番でくらべる？</label>
+    <label style="font-weight: bold; color: #2980b9;">表示する期間と対象：</label>
     <select id="sort-mode" onchange="updateChart()">
-      <option value="total-desc">🏆 全体：長い順（歴代トップ層）</option>
-      <option value="total-asc">🌱 全体：短い順</option>
-      <option value="month-desc">📅 今月：長い順</option>
-      <option value="week-desc">🔥 今週：長い順（今週のがんばり屋）</option>
-      <option value="close-to-me" selected>🤝 自分と近い人（前後10人）</option>
+      <option value="total-all">🏆 累計：全体のランキング</option>
+      <option value="month-all">📅 今月：全体のランキング</option>
+      <option value="week-all">🔥 今週：全体のランキング</option>
+      <option value="total-close" selected>🤝 累計：自分と近い人（前後5人）</option>
+      <option value="week-close">⚡️ 今週：自分と近い人（前後5人）</option>
     </select>
   </div>
 
-  <p class="note">👑 トップ30名にランクインすると名前（殿堂入り）が表示されます！ 下の濃い色が「がっこう」、上の明るい色が「じぶん」の学習です。</p>
+  <div class="note">
+    <strong>🛡️ プライバシー＆殿堂入りルール</strong><br>
+    ・各期間で<strong>「上位20位」</strong>に入った人は、殿堂入りとして<strong>「本名と順位」</strong>が表示されます。<br>
+    ・21位以降の人は、プライバシーを守るため<strong>「イニシャル（匿名）」</strong>になります。<br>
+    ・一番左の赤いグラフは、いつでも「あなた自身」の記録です。
+  </div>
 
   <div class="chart-wrapper">
     <div class="chart-container" id="chart-box">
@@ -98,23 +108,26 @@
   const allData = [];
   const names = ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤", "吉田", "山田", "佐々木", "山口", "松本"];
   
-  // 1. 自分のデータ
+  // 1. 自分のデータ（あえて20位圏外になるくらいの数値にしてテストします）
   allData.push({
     id: "user_me",
     realName: "青木 太郎 (自分)",
     initial: "青木 太郎 (自分)",
     times: {
-      total: { school: 9500, self: 6000 },
-      month: { school: 2400, self: 1800 },
-      week:  { school: 600, self: 400 }
+      total: { school: 3000, self: 1500 },
+      month: { school: 800, self: 400 },
+      week:  { school: 200, self: 100 }
     }
   });
 
-  // 2. クラスメイト40人分のダミーデータ
-  for(let i = 1; i <= 40; i++) {
+  // 2. 学年50人分のダミーデータ
+  for(let i = 1; i <= 50; i++) {
     const lastName = names[i % names.length];
-    const baseTotalS = 3000 + Math.floor(Math.random() * 8000);
-    const baseTotalM = 2000 + Math.floor(Math.random() * 6000);
+    
+    // 0〜10000の間でばらつきを持たせる
+    const baseTotalS = Math.floor(Math.random() * 6000) + 1000;
+    const baseTotalM = Math.floor(Math.random() * 4000) + 500;
+    
     allData.push({
       id: "u" + i,
       realName: `${lastName} ${i}号`,
@@ -138,15 +151,15 @@
         labels: [], 
         datasets: [
           { label: 'がっこう', data: [], backgroundColor: [], borderRadius: 0 },
-          { label: 'じぶん', data: [], backgroundColor: [], borderRadius: 4 } // 上に積む方だけ角を丸く
+          { label: 'じぶん', data: [], backgroundColor: [], borderRadius: 4 }
         ] 
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false }, // マウスを乗せた時に2つのデータを同時に表示
+        interaction: { mode: 'index', intersect: false },
         plugins: { legend: { display: false } },
         scales: { 
-          x: { stacked: true }, // 積み上げを有効化
+          x: { stacked: true }, 
           y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間（分）' } } 
         }
       }
@@ -165,11 +178,12 @@
       return t.school + t.self;
     };
 
+    // どの期間のデータを見るか（total, month, week）
     let period = 'total';
-    if(sortMode.includes('week')) period = 'week';
     if(sortMode.includes('month')) period = 'month';
+    if(sortMode.includes('week')) period = 'week';
 
-    // 全員をソートして順位確定
+    // 🌟 全員を現在の期間・カテゴリでソートして「順位（currentRank）」を確定
     let rankedData = [...allData].sort((a, b) => getVal(b, period) - getVal(a, period));
     rankedData.forEach((user, index) => { user.currentRank = index + 1; });
 
@@ -177,19 +191,21 @@
     const me = rankedData.find(u => u.id === 'user_me');
     let displayOthers = [];
 
-    if (sortMode.includes('desc')) {
+    if (sortMode.includes('all')) {
+      // 全体表示（自分以外を順位順に並べる）
       displayOthers = rankedData.filter(u => u.id !== 'user_me');
-    } else if (sortMode.includes('asc')) {
-      displayOthers = rankedData.filter(u => u.id !== 'user_me').reverse();
-    } else if (sortMode === 'close-to-me') {
+    } else if (sortMode.includes('close')) {
+      // 自分と近い人（前後5人、計最大10人を抽出）
       const myIndex = rankedData.findIndex(u => u.id === 'user_me');
       const start = Math.max(0, myIndex - 5);
       const end = Math.min(rankedData.length, myIndex + 6);
       displayOthers = rankedData.slice(start, end).filter(u => u.id !== 'user_me');
     }
 
+    // 必ず「自分」を一番左に固定
     const finalArray = [me, ...displayOthers];
 
+    // 人数に合わせてグラフの幅を自動調整
     document.getElementById('chart-box').style.width = Math.max(800, finalArray.length * 40) + 'px';
 
     // グラフ用データの構築
@@ -200,16 +216,18 @@
     const selfColors = [];
 
     finalArray.forEach(u => {
-      // ラベルと色の割り当て（濃淡で2色表現）
+      // 🌟 プライバシー保護＆名前表示のロジック
       if (u.id === 'user_me') {
-        labels.push(`⭐️ ${u.realName}`);
+        labels.push(`⭐️ ${u.realName} (${u.currentRank}位)`);
         schoolColors.push('#c0392b'); // 自分・がっこう（濃い赤）
         selfColors.push('#e74c3c');   // 自分・じぶん（明るい赤）
-      } else if (u.currentRank <= 30) {
+      } else if (u.currentRank <= 20) {
+        // TOP 20は実名表示
         labels.push(`${u.currentRank}位: ${u.realName}`);
-        schoolColors.push('#d35400'); // Top30・がっこう（濃いオレンジ）
-        selfColors.push('#f1c40f');   // Top30・じぶん（明るいゴールド）
+        schoolColors.push('#d35400'); // Top20・がっこう（濃いオレンジ）
+        selfColors.push('#f1c40f');   // Top20・じぶん（明るいゴールド）
       } else {
+        // 21位以降は匿名（イニシャル）表示
         labels.push(`${u.currentRank}位: ${u.initial}`);
         schoolColors.push('#2980b9'); // その他・がっこう（濃い青）
         selfColors.push('#3498db');   // その他・じぶん（明るい青）
@@ -226,7 +244,7 @@
     analysisChart.data.datasets[1].data = selfData;
     analysisChart.data.datasets[1].backgroundColor = selfColors;
     
-    // フィルターに応じた表示/非表示の切り替え
+    // フィルターに応じた表示/非表示と軸の切り替え
     if (viewType === 'all') {
       analysisChart.setDatasetVisibility(0, true);
       analysisChart.setDatasetVisibility(1, true);
@@ -244,6 +262,7 @@
     analysisChart.update();
   }
 
+  // 初期化実行
   initChart();
   updateChart();
 
