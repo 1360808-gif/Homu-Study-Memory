@@ -3,159 +3,234 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>先生用 管理画面</title>
+<title>学習ダッシュボード</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   body {
     font-family: "Helvetica Neue", Arial, sans-serif;
-    background-color: #ecf0f1; /* 落ち着いたグレー */
+    background-color: #f0f8ff;
     color: #333;
     display: flex;
     justify-content: center;
-    padding: 40px 0;
+    padding: 20px 0;
     margin: 0;
   }
-  .admin-container {
+  .app-container {
     background: #fff;
     width: 95%;
     max-width: 600px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    padding: 20px;
+    text-align: center;
   }
-  h1 { font-size: 22px; color: #2c3e50; border-bottom: 2px solid #34495e; padding-bottom: 10px; margin-top: 0; }
-  h2 { font-size: 18px; color: #34495e; margin: 20px 0 10px 0; }
+  h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
+  h2 { font-size: 18px; color: #34495e; margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
   
-  /* パスワード画面用 */
-  #login-screen { text-align: center; }
-  #login-screen input { width: 80%; padding: 10px; font-size: 18px; margin-bottom: 20px; text-align: center; }
-  
-  /* 管理画面用 */
-  #admin-screen { display: none; }
-  
-  .setting-card {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+  .section {
+    background-color: #fdfdfd;
+    border: 1px solid #ecf0f1;
+    border-radius: 15px;
     padding: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
   }
-  .class-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px dashed #ccc;
-    padding: 10px 0;
-  }
-  .class-row:last-child { border-bottom: none; }
-  
-  .input-group { display: flex; align-items: center; gap: 10px; }
-  .input-group label { font-size: 14px; color: #555; }
-  .input-group input { width: 60px; padding: 5px; font-size: 16px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
-  
-  .status-text { font-size: 14px; font-weight: bold; color: #2980b9; }
 
-  button {
-    width: 100%; padding: 12px; font-size: 16px; font-weight: bold; color: #fff;
-    background-color: #34495e; border: none; border-radius: 5px; cursor: pointer;
-    margin-top: 15px; transition: background-color 0.2s;
+  /* 🌟 全体フィルターのデザイン */
+  .global-filter {
+    display: flex;
+    justify-content: space-around;
+    background-color: #ffeaa7; /* 目立つように少し色を変えています */
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border: 2px solid #fdcb6e;
   }
-  button:hover { background-color: #2c3e50; }
-  .save-btn { background-color: #27ae60; }
-  .save-btn:hover { background-color: #219a52; }
+  .global-filter label {
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* 学年全体ゲージのデザイン */
+  .goal-text { font-size: 16px; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
+  .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; width: 100%; position: relative; overflow: hidden; }
+  .progress-bar {
+    background: linear-gradient(90deg, #f1c40f, #f39c12);
+    height: 100%; width: 0%; /* JSで動かします */
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; border-radius: 10px 0 0 10px; transition: width 0.5s ease;
+  }
+  
+  .chart-container { position: relative; height: 250px; width: 100%; }
+
+  /* 先生用設定 */
+  .teacher-section { background-color: #eee; border: 2px dashed #bdc3c7; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: left; }
+  .teacher-section h3 { margin: 0 0 10px 0; font-size: 14px; color: #7f8c8d; }
+  .class-setting { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 14px; }
+  .class-setting input { width: 50px; padding: 2px; text-align: center; }
+
+  button.main-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background-color: #95a5a6; border: none; border-radius: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
 
-<div class="admin-container">
-  
-  <div id="login-screen">
-    <h1>🔒 先生用 管理画面ログイン</h1>
-    <p>管理者パスワードを入力してください</p>
-    <input type="password" id="admin-pass" placeholder="パスワード（例: 0000）">
-    <button onclick="checkAdminPassword()">ログイン</button>
+<div class="app-container">
+  <h1>🌟 〇年生 がんばりダッシュボード</h1>
+
+  <div class="global-filter">
+    <label><input type="radio" name="viewType" value="all" checked onchange="updateDashboard()"> ぜんぶ</label>
+    <label><input type="radio" name="viewType" value="school" onchange="updateDashboard()"> がっこう</label>
+    <label><input type="radio" name="viewType" value="self" onchange="updateDashboard()"> じぶん</label>
   </div>
 
-  <div id="admin-screen">
-    <h1>👨‍🏫 学年ダッシュボード 管理設定</h1>
-    <p style="font-size: 14px; color: #666;">ダッシュボードに反映されるクラスの平均値の計算式を調整します。</p>
+  <div class="teacher-section">
+    <h3>👨‍🏫 先生用：分母調整（平均グラフ用）</h3>
+    <div class="class-setting">1組: 除外 <input type="number" id="exclude-1" min="0" value="0" onchange="updateDashboard()"> 名</div>
+    <div class="class-setting">2組: 除外 <input type="number" id="exclude-2" min="0" value="0" onchange="updateDashboard()"> 名</div>
+    <div class="class-setting">3組: 除外 <input type="number" id="exclude-3" min="0" value="0" onchange="updateDashboard()"> 名</div>
+  </div>
 
-    <h2>📊 クラス人数の設定（分母の調整）</h2>
-    <div class="setting-card">
-      <p style="font-size: 12px; color: #e74c3c; margin-top: 0;">※長期欠席等の児童を除外し、子供たちのグラフの平均値を適正に保ちます。</p>
-      
-      <div class="class-row">
-        <strong>1組</strong>
-        <div class="input-group">
-          <label>基本在籍:</label>
-          <input type="number" id="base-1" value="30" onchange="calcActive(1)">
-          <label>除外:</label>
-          <input type="number" id="exclude-1" value="0" min="0" onchange="calcActive(1)">
-        </div>
-        <div class="status-text">計算用: <span id="active-1">30</span>名</div>
-      </div>
-
-      <div class="class-row">
-        <strong>2組</strong>
-        <div class="input-group">
-          <label>基本在籍:</label>
-          <input type="number" id="base-2" value="30" onchange="calcActive(2)">
-          <label>除外:</label>
-          <input type="number" id="exclude-2" value="0" min="0" onchange="calcActive(2)">
-        </div>
-        <div class="status-text">計算用: <span id="active-2">30</span>名</div>
-      </div>
-
-      <div class="class-row">
-        <strong>3組</strong>
-        <div class="input-group">
-          <label>基本在籍:</label>
-          <input type="number" id="base-3" value="30" onchange="calcActive(3)">
-          <label>除外:</label>
-          <input type="number" id="exclude-3" value="0" min="0" onchange="calcActive(3)">
-        </div>
-        <div class="status-text">計算用: <span id="active-3">30</span>名</div>
-      </div>
+  <div class="section">
+    <h2 id="goal-title">🤝 みんなで達成しよう！（ぜんぶ）</h2>
+    <p class="goal-text" id="goal-text">計算中...</p>
+    <div class="progress-bg">
+      <div class="progress-bar" id="progress-bar">0%</div>
     </div>
-
-    <button class="save-btn" onclick="saveSettings()">設定を保存してダッシュボードに反映</button>
-    <button onclick="logout()">ログアウト</button>
   </div>
+
+  <div class="section">
+    <h2>🔥 クラス対抗！ 1人あたりの平均時間</h2>
+    <div class="chart-container">
+      <canvas id="classChart"></canvas>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>👤 あなたのがんばり（青木 太郎 さん）</h2>
+    <div class="chart-container">
+      <canvas id="personalChart"></canvas>
+    </div>
+  </div>
+
+  <button class="main-btn" onclick="alert('入力画面にもどります')">最初の画面にもどる</button>
 
 </div>
 
 <script>
-  // 簡易的なパスワードチェック（プロトタイプ用：0000でログイン）
-  function checkAdminPassword() {
-    const pass = document.getElementById('admin-pass').value;
-    if (pass === '0000') {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('admin-screen').style.display = 'block';
-    } else {
-      alert('パスワードが間違っています。');
+  // ＝ データの準備 ＝
+  // クラスごとの「がっこう」と「じぶん」の合計時間を分けて持ちます
+  const classData = {
+    "1組": { schoolTime: 4200, selfTime: 2100, baseStudents: 30 },
+    "2組": { schoolTime: 4900, selfTime: 2450, baseStudents: 30 },
+    "3組": { schoolTime: 3800, selfTime: 1900, baseStudents: 30 }
+  };
+
+  // 学年全体の目標設定
+  const goalSettings = {
+    all: { title: "（ぜんぶ）", target: 30000, color: "linear-gradient(90deg, #f1c40f, #f39c12)" },
+    school: { title: "（がっこうの勉強）", target: 18000, color: "linear-gradient(90deg, #3498db, #2980b9)" },
+    self: { title: "（じぶんの学習）", target: 12000, color: "linear-gradient(90deg, #e74c3c, #c0392b)" }
+  };
+
+  // ＝ グラフの初期設定 ＝
+
+  // ② クラス対抗グラフ（積み上げ式に変更）
+  const classCtx = document.getElementById('classChart').getContext('2d');
+  let classChart = new Chart(classCtx, {
+    type: 'bar',
+    data: {
+      labels: ['1組', '2組', '3組'],
+      datasets: [
+        { label: 'がっこう', data: [0,0,0], backgroundColor: '#2980b9' }, // Index 0
+        { label: 'じぶん', data: [0,0,0], backgroundColor: '#c0392b' }  // Index 1
+      ]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true, title: { display: true, text: '平均時間（分）' } }, y: { stacked: true } }
     }
-  }
+  });
 
-  // ログアウト処理
-  function logout() {
-    document.getElementById('admin-pass').value = '';
-    document.getElementById('admin-screen').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'block';
-  }
+  // ③ 個人の記録グラフ
+  const personalCtx = document.getElementById('personalChart').getContext('2d');
+  let personalChart = new Chart(personalCtx, {
+    type: 'bar',
+    data: {
+      labels: ['1週目', '2週目', '3週目', '今週'],
+      datasets: [
+        { label: 'がっこう', data: [120, 150, 130, 90], backgroundColor: '#2980b9' }, // Index 0
+        { label: 'じぶん', data: [60, 40, 80, 120], backgroundColor: '#c0392b' }  // Index 1
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間（分）' } } }
+    }
+  });
 
-  // 計算用人数（分母）をリアルタイム表示する
-  function calcActive(classNum) {
-    const base = parseInt(document.getElementById(`base-${classNum}`).value) || 0;
-    const exclude = parseInt(document.getElementById(`exclude-${classNum}`).value) || 0;
+  // ＝ ✨ すべてを連動して更新するメイン関数 ＝
+  function updateDashboard() {
+    // 1. 選択されているフィルターを取得
+    const filter = document.querySelector('input[name="viewType"]:checked').value;
     
-    // 0人以下にならないように最低1人とする
-    const active = Math.max(1, base - exclude);
-    document.getElementById(`active-${classNum}`).innerText = active;
+    // 2. 先生の設定（除外人数）を取得し、計算用人数を出す
+    const ex1 = parseInt(document.getElementById('exclude-1').value) || 0;
+    const ex2 = parseInt(document.getElementById('exclude-2').value) || 0;
+    const ex3 = parseInt(document.getElementById('exclude-3').value) || 0;
+    const active1 = Math.max(1, classData["1組"].baseStudents - ex1);
+    const active2 = Math.max(1, classData["2組"].baseStudents - ex2);
+    const active3 = Math.max(1, classData["3組"].baseStudents - ex3);
+
+    // --- ① 学年全体の更新 ---
+    let currentTotal = 0;
+    if (filter === 'all' || filter === 'school') {
+      currentTotal += classData["1組"].schoolTime + classData["2組"].schoolTime + classData["3組"].schoolTime;
+    }
+    if (filter === 'all' || filter === 'self') {
+      currentTotal += classData["1組"].selfTime + classData["2組"].selfTime + classData["3組"].selfTime;
+    }
+    
+    const goal = goalSettings[filter];
+    const percentage = Math.min(100, Math.round((currentTotal / goal.target) * 100));
+    const remaining = Math.max(0, goal.target - currentTotal);
+
+    document.getElementById('goal-title').innerText = `🤝 みんなで達成しよう！${goal.title}`;
+    document.getElementById('goal-text').innerText = `目標 ${goal.target.toLocaleString()}分 まで、あと ${remaining.toLocaleString()}分！`;
+    
+    const bar = document.getElementById('progress-bar');
+    bar.style.width = percentage + '%';
+    bar.style.background = goal.color;
+    bar.innerText = `${currentTotal.toLocaleString()}分 (${percentage}%)`;
+
+    // --- ② クラス対抗グラフの更新 ---
+    // データの再計算
+    classChart.data.datasets[0].data = [
+      Math.round(classData["1組"].schoolTime / active1),
+      Math.round(classData["2組"].schoolTime / active2),
+      Math.round(classData["3組"].schoolTime / active3)
+    ];
+    classChart.data.datasets[1].data = [
+      Math.round(classData["1組"].selfTime / active1),
+      Math.round(classData["2組"].selfTime / active2),
+      Math.round(classData["3組"].selfTime / active3)
+    ];
+
+    // 表示・非表示の切り替え
+    classChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
+    classChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
+    classChart.update();
+
+    // --- ③ 個人の記録グラフの更新 ---
+    personalChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
+    personalChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
+    personalChart.update();
   }
 
-  // 保存ボタン（本来はここでGASやデータベースに設定値を送信します）
-  function saveSettings() {
-    alert('設定を保存しました。\n（※本来はここでデータベースに人数情報が送られ、子供のダッシュボードの計算式が書き換わります）');
-  }
+  // 画面を開いたときに一度実行する
+  updateDashboard();
 </script>
 
 </body>
