@@ -18,7 +18,7 @@
   .app-container {
     background: #fff;
     width: 95%;
-    max-width: 800px; /* グラフが見やすいように少し広めに設定 */
+    max-width: 900px; /* 棒が多いのでさらに少し広めに */
     border-radius: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     padding: 20px;
@@ -26,46 +26,49 @@
   }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
   
+  /* 全体フィルター */
+  .global-filter {
+    display: flex;
+    justify-content: space-around;
+    background-color: #ffeaa7;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    border: 2px solid #fdcb6e;
+  }
+  .global-filter label { font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+  /* 並び替えコントロール */
   .controls {
     background-color: #e8f4f8;
     padding: 15px;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     display: flex;
-    flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
     align-items: center;
   }
-  .controls select {
-    padding: 10px;
-    font-size: 16px;
-    border-radius: 5px;
-    border: 1px solid #bdc3c7;
-    background-color: #fff;
-    cursor: pointer;
-  }
+  .controls select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #bdc3c7; cursor: pointer; }
   
-  .note {
-    font-size: 12px;
-    color: #7f8c8d;
-    margin-bottom: 15px;
-    text-align: left;
-  }
+  .note { font-size: 13px; color: #e74c3c; margin-bottom: 15px; text-align: left; font-weight: bold; background: #fdf2e9; padding: 10px; border-radius: 5px;}
 
+  /* グラフエリア（横スクロールできるように設定） */
+  .chart-wrapper {
+    width: 100%;
+    overflow-x: auto; /* 人数が多い時にスクロールさせる */
+    margin-bottom: 20px;
+  }
   .chart-container {
     position: relative;
-    height: 400px; /* 棒グラフをたくさん並べるため高めに設定 */
-    width: 100%;
-    margin-bottom: 20px;
+    height: 400px;
+    min-width: 800px; /* グラフが潰れないように最低幅を設定 */
   }
 
   button.main-btn {
     width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff;
     background-color: #95a5a6; border: none; border-radius: 10px; cursor: pointer;
-    transition: background-color 0.2s;
   }
-  button.main-btn:active { background-color: #7f8c8d; }
 </style>
 </head>
 <body>
@@ -73,153 +76,168 @@
 <div class="app-container">
   <h1>🔍 じぶんとみんなの「がんばり分析」</h1>
 
+  <div class="global-filter">
+    <label><input type="radio" name="viewType" value="all" checked onchange="updateChart()"> ぜんぶ</label>
+    <label><input type="radio" name="viewType" value="school" onchange="updateChart()"> がっこう</label>
+    <label><input type="radio" name="viewType" value="self" onchange="updateChart()"> じぶん</label>
+  </div>
+
   <div class="controls">
     <label style="font-weight: bold; color: #2980b9;">どんな順番でくらべる？</label>
     <select id="sort-mode" onchange="updateChart()">
-      <option value="total-desc">🏆 全体：長い順（トップ層をみる）</option>
+      <option value="total-desc">🏆 全体：長い順（歴代トップ層）</option>
       <option value="total-asc">🌱 全体：短い順</option>
-      <option value="week-desc">🔥 今週：長い順（今週のがんばり屋）</option>
       <option value="month-desc">📅 今月：長い順</option>
-      <option value="close-to-me" selected>🤝 自分と近い人（前後約10人）</option>
+      <option value="week-desc">🔥 今週：長い順（今週のがんばり屋）</option>
+      <option value="close-to-me" selected>🤝 自分と近い人（前後10人）</option>
     </select>
   </div>
 
-  <p class="note">※ プライバシーのため、他の人はイニシャルで表示されています。一番左の赤いグラフが「あなた」です。</p>
+  <p class="note">👑 トップ30名にランクインすると名前（殿堂入り）が表示されます！ それ以外の人はイニシャルで表示されます。</p>
 
-  <div class="chart-container">
-    <canvas id="analysisChart"></canvas>
+  <div class="chart-wrapper">
+    <div class="chart-container" id="chart-box">
+      <canvas id="analysisChart"></canvas>
+    </div>
   </div>
 
   <button class="main-btn" onclick="alert('ダッシュボードにもどります')">ダッシュボードにもどる</button>
-
 </div>
 
 <script>
-  // ＝ 疑似データ（15人分） ＝
-  // 実際のシステムではデータベースから取得します
-  const myId = "user_me";
-  const allData = [
-    { id: "user_me", name: "自分 (青木)", total: 12500, month: 3200, week: 800 },
-    { id: "u1", name: "A.S さん", total: 15000, month: 4000, week: 1000 },
-    { id: "u2", name: "B.K さん", total: 14200, month: 3800, week: 950 },
-    { id: "u3", name: "C.Y さん", total: 13800, month: 3600, week: 900 },
-    { id: "u4", name: "D.M さん", total: 13100, month: 3500, week: 850 },
-    { id: "u5", name: "E.T さん", total: 12800, month: 3300, week: 820 },
-    { id: "u6", name: "F.N さん", total: 12400, month: 3100, week: 780 },
-    { id: "u7", name: "G.R さん", total: 12100, month: 3000, week: 750 },
-    { id: "u8", name: "H.W さん", total: 11800, month: 2900, week: 700 },
-    { id: "u9", name: "I.O さん", total: 11200, month: 2800, week: 680 },
-    { id: "u10", name: "J.H さん", total: 10500, month: 2500, week: 600 },
-    { id: "u11", name: "K.I さん", total: 9800, month: 2200, week: 550 },
-    { id: "u12", name: "L.A さん", total: 8500, month: 2000, week: 500 },
-    { id: "u13", name: "M.S さん", total: 7200, month: 1800, week: 450 },
-    { id: "u14", name: "N.E さん", total: 6000, month: 1500, week: 400 }
-  ];
+  // ＝ データの準備 ＝
+  const allData = [];
+  const names = ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤", "吉田", "山田", "佐々木", "山口", "松本"];
+  
+  // 1. 自分のデータを登録
+  allData.push({
+    id: "user_me",
+    realName: "青木 太郎 (自分)",
+    initial: "青木 太郎 (自分)",
+    times: {
+      total: { school: 9500, self: 6000 },
+      month: { school: 2400, self: 1800 },
+      week:  { school: 600, self: 400 }
+    }
+  });
 
-  // グラフの設定用変数
+  // 2. クラスメイト40人分のダミーデータを自動生成
+  for(let i = 1; i <= 40; i++) {
+    const lastName = names[i % names.length];
+    
+    // ランダムな学習時間を生成（一部すごく長い子を作る）
+    const baseTotalS = 3000 + Math.floor(Math.random() * 8000);
+    const baseTotalM = 2000 + Math.floor(Math.random() * 6000);
+    
+    allData.push({
+      id: "u" + i,
+      realName: `${lastName} ${i}号`, // 例: 佐藤 1号
+      initial: `${lastName.charAt(0)}. 匿名`, // 例: 佐. 匿名
+      times: {
+        total: { school: baseTotalS, self: baseTotalM },
+        month: { school: Math.floor(baseTotalS * 0.25), self: Math.floor(baseTotalM * 0.25) },
+        week:  { school: Math.floor(baseTotalS * 0.06), self: Math.floor(baseTotalM * 0.06) }
+      }
+    });
+  }
+
+  // ＝ グラフの初期設定 ＝
   let analysisChart;
   const ctx = document.getElementById('analysisChart').getContext('2d');
 
   function initChart() {
     analysisChart = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: [], // 名前が入ります
-        datasets: [{
-          label: '学習時間（分）',
-          data: [], // 時間が入ります
-          backgroundColor: [], // 色（自分だけ変えます）
-          borderRadius: 5
-        }]
-      },
+      data: { labels: [], datasets: [{ label: '学習時間', data: [], backgroundColor: [], borderRadius: 4 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(context) { return context.raw + ' 分'; }
-            }
-          }
-        },
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: '時間（分）' } }
-        }
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, title: { display: true, text: '時間（分）' } } }
       }
     });
   }
 
-  // データの並び替えとグラフの更新処理
+  // ＝ グラフの更新処理（フィルター・ソート・Top30判定） ＝
   function updateChart() {
-    const mode = document.getElementById('sort-mode').value;
-    
-    // 自分のデータを取得
-    const me = allData.find(d => d.id === myId);
-    let others = allData.filter(d => d.id !== myId);
-    let displayData = [];
-    let dataKey = 'total'; // グラフに表示する数値の種類
+    const viewType = document.querySelector('input[name="viewType"]:checked').value;
+    const sortMode = document.getElementById('sort-mode').value;
 
-    // 並び替えのロジック
-    if (mode === 'total-desc') {
-      dataKey = 'total';
-      others.sort((a, b) => b.total - a.total);
-      displayData = others;
-    } 
-    else if (mode === 'total-asc') {
-      dataKey = 'total';
-      others.sort((a, b) => a.total - b.total);
-      displayData = others;
-    } 
-    else if (mode === 'week-desc') {
-      dataKey = 'week';
-      others.sort((a, b) => b.week - a.week);
-      displayData = others;
-    } 
-    else if (mode === 'month-desc') {
-      dataKey = 'month';
-      others.sort((a, b) => b.month - a.month);
-      displayData = others;
-    } 
-    else if (mode === 'close-to-me') {
-      dataKey = 'total';
-      // 一旦全員をトータルで降順に並べる
-      const sortedAll = [...allData].sort((a, b) => b.total - a.total);
-      const myIndex = sortedAll.findIndex(d => d.id === myId);
-      
-      // 自分の前後5人（合計最大10人）を切り出す
+    // 現在のフィルター条件に基づいて値を取り出す関数
+    const getVal = (user, period) => {
+      const t = user.times[period];
+      if (viewType === 'school') return t.school;
+      if (viewType === 'self') return t.self;
+      return t.school + t.self;
+    };
+
+    // どの期間のデータを見るか決定
+    let period = 'total';
+    if(sortMode.includes('week')) period = 'week';
+    if(sortMode.includes('month')) period = 'month';
+
+    // 🏆 【超重要】まず全員を現在の条件で降順ソートし、全体の「順位」を確定させる
+    let rankedData = [...allData].sort((a, b) => getVal(b, period) - getVal(a, period));
+    
+    // 順位（Rank）を付与
+    rankedData.forEach((user, index) => {
+      user.currentRank = index + 1;
+    });
+
+    // 自分のデータを確保
+    const me = rankedData.find(u => u.id === 'user_me');
+    let displayOthers = [];
+
+    // 表示用の配列を作成（昇順・降順・近い人）
+    if (sortMode.includes('desc')) {
+      displayOthers = rankedData.filter(u => u.id !== 'user_me');
+    } else if (sortMode.includes('asc')) {
+      displayOthers = rankedData.filter(u => u.id !== 'user_me').reverse();
+    } else if (sortMode === 'close-to-me') {
+      const myIndex = rankedData.findIndex(u => u.id === 'user_me');
       const start = Math.max(0, myIndex - 5);
-      const end = Math.min(sortedAll.length, myIndex + 6);
-      
-      // 切り出したリストから自分を抜き取る（後で先頭にくっつけるため）
-      displayData = sortedAll.slice(start, end).filter(d => d.id !== myId);
+      const end = Math.min(rankedData.length, myIndex + 6);
+      displayOthers = rankedData.slice(start, end).filter(u => u.id !== 'user_me');
     }
 
-    // ★重要★ 必ず「自分」を配列の1番最初（index 0）に固定する
-    const finalArray = [me, ...displayData];
+    // 必ず「自分」を一番左（配列の最初）に固定
+    const finalArray = [me, ...displayOthers];
 
-    // Chart.js用の配列を作成
-    const labels = finalArray.map(d => d.name);
-    const dataValues = finalArray.map(d => d[dataKey]);
+    // グラフの横幅を人数に合わせて調整（人数が多いと横スクロールになる）
+    document.getElementById('chart-box').style.width = Math.max(800, finalArray.length * 40) + 'px';
+
+    // ラベルとデータの生成
+    const labels = finalArray.map(u => {
+      if (u.id === 'user_me') return `⭐️ ${u.realName}`;
+      // トップ30位以内なら本名、それ以下ならイニシャル
+      if (u.currentRank <= 30) {
+        return `${u.currentRank}位: ${u.realName}`;
+      } else {
+        return `${u.currentRank}位: ${u.initial}`;
+      }
+    });
+
+    const dataValues = finalArray.map(u => getVal(u, period));
     
-    // 自分の棒グラフは赤系、他の人は青系で視覚的に区別する
-    const colors = finalArray.map(d => d.id === myId ? '#e74c3c' : '#3498db');
+    // 自分の棒グラフは赤系、トップ30位はゴールド系、それ以外は青系に色分け
+    const colors = finalArray.map(u => {
+      if (u.id === 'user_me') return '#e74c3c'; // 赤（自分）
+      if (u.currentRank <= 30) return '#f1c40f'; // ゴールド（トップ30殿堂入り）
+      return '#3498db'; // 青（その他）
+    });
 
-    // グラフにデータをセットして更新
+    // グラフを更新
     analysisChart.data.labels = labels;
     analysisChart.data.datasets[0].data = dataValues;
     analysisChart.data.datasets[0].backgroundColor = colors;
     
-    // 縦軸のタイトルも切り替える
-    let axisLabel = '総合時間（分）';
-    if(dataKey === 'week') axisLabel = '今週の時間（分）';
-    if(dataKey === 'month') axisLabel = '今月の時間（分）';
-    analysisChart.options.scales.y.title.text = axisLabel;
+    // 縦軸のタイトル変更
+    let axisLabel = viewType === 'school' ? 'がっこうの時間' : viewType === 'self' ? 'じぶんの学習' : '総合時間';
+    analysisChart.options.scales.y.title.text = axisLabel + '（分）';
 
     analysisChart.update();
   }
 
-  // 画面を開いた時の初期化
+  // 初期化実行
   initChart();
   updateChart();
 
