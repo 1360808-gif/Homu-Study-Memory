@@ -18,7 +18,7 @@
   .app-container {
     background: #fff;
     width: 95%;
-    max-width: 900px; /* 棒が多いのでさらに少し広めに */
+    max-width: 900px;
     border-radius: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     padding: 20px;
@@ -26,7 +26,6 @@
   }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
   
-  /* 全体フィルター */
   .global-filter {
     display: flex;
     justify-content: space-around;
@@ -38,7 +37,6 @@
   }
   .global-filter label { font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 
-  /* 並び替えコントロール */
   .controls {
     background-color: #e8f4f8;
     padding: 15px;
@@ -53,17 +51,8 @@
   
   .note { font-size: 13px; color: #e74c3c; margin-bottom: 15px; text-align: left; font-weight: bold; background: #fdf2e9; padding: 10px; border-radius: 5px;}
 
-  /* グラフエリア（横スクロールできるように設定） */
-  .chart-wrapper {
-    width: 100%;
-    overflow-x: auto; /* 人数が多い時にスクロールさせる */
-    margin-bottom: 20px;
-  }
-  .chart-container {
-    position: relative;
-    height: 400px;
-    min-width: 800px; /* グラフが潰れないように最低幅を設定 */
-  }
+  .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 20px; }
+  .chart-container { position: relative; height: 400px; min-width: 800px; }
 
   button.main-btn {
     width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff;
@@ -77,7 +66,7 @@
   <h1>🔍 じぶんとみんなの「がんばり分析」</h1>
 
   <div class="global-filter">
-    <label><input type="radio" name="viewType" value="all" checked onchange="updateChart()"> ぜんぶ</label>
+    <label><input type="radio" name="viewType" value="all" checked onchange="updateChart()"> ぜんぶ（割合も表示）</label>
     <label><input type="radio" name="viewType" value="school" onchange="updateChart()"> がっこう</label>
     <label><input type="radio" name="viewType" value="self" onchange="updateChart()"> じぶん</label>
   </div>
@@ -93,7 +82,7 @@
     </select>
   </div>
 
-  <p class="note">👑 トップ30名にランクインすると名前（殿堂入り）が表示されます！ それ以外の人はイニシャルで表示されます。</p>
+  <p class="note">👑 トップ30名にランクインすると名前（殿堂入り）が表示されます！ 下の濃い色が「がっこう」、上の明るい色が「じぶん」の学習です。</p>
 
   <div class="chart-wrapper">
     <div class="chart-container" id="chart-box">
@@ -109,7 +98,7 @@
   const allData = [];
   const names = ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤", "吉田", "山田", "佐々木", "山口", "松本"];
   
-  // 1. 自分のデータを登録
+  // 1. 自分のデータ
   allData.push({
     id: "user_me",
     realName: "青木 太郎 (自分)",
@@ -121,18 +110,15 @@
     }
   });
 
-  // 2. クラスメイト40人分のダミーデータを自動生成
+  // 2. クラスメイト40人分のダミーデータ
   for(let i = 1; i <= 40; i++) {
     const lastName = names[i % names.length];
-    
-    // ランダムな学習時間を生成（一部すごく長い子を作る）
     const baseTotalS = 3000 + Math.floor(Math.random() * 8000);
     const baseTotalM = 2000 + Math.floor(Math.random() * 6000);
-    
     allData.push({
       id: "u" + i,
-      realName: `${lastName} ${i}号`, // 例: 佐藤 1号
-      initial: `${lastName.charAt(0)}. 匿名`, // 例: 佐. 匿名
+      realName: `${lastName} ${i}号`,
+      initial: `${lastName.charAt(0)}. 匿名`,
       times: {
         total: { school: baseTotalS, self: baseTotalM },
         month: { school: Math.floor(baseTotalS * 0.25), self: Math.floor(baseTotalM * 0.25) },
@@ -141,28 +127,37 @@
     });
   }
 
-  // ＝ グラフの初期設定 ＝
+  // ＝ グラフの初期設定（積み上げ設定） ＝
   let analysisChart;
   const ctx = document.getElementById('analysisChart').getContext('2d');
 
   function initChart() {
     analysisChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: [], datasets: [{ label: '学習時間', data: [], backgroundColor: [], borderRadius: 4 }] },
+      data: { 
+        labels: [], 
+        datasets: [
+          { label: 'がっこう', data: [], backgroundColor: [], borderRadius: 0 },
+          { label: 'じぶん', data: [], backgroundColor: [], borderRadius: 4 } // 上に積む方だけ角を丸く
+        ] 
+      },
       options: {
         responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false }, // マウスを乗せた時に2つのデータを同時に表示
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, title: { display: true, text: '時間（分）' } } }
+        scales: { 
+          x: { stacked: true }, // 積み上げを有効化
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間（分）' } } 
+        }
       }
     });
   }
 
-  // ＝ グラフの更新処理（フィルター・ソート・Top30判定） ＝
+  // ＝ グラフの更新処理 ＝
   function updateChart() {
     const viewType = document.querySelector('input[name="viewType"]:checked').value;
     const sortMode = document.getElementById('sort-mode').value;
 
-    // 現在のフィルター条件に基づいて値を取り出す関数
     const getVal = (user, period) => {
       const t = user.times[period];
       if (viewType === 'school') return t.school;
@@ -170,24 +165,18 @@
       return t.school + t.self;
     };
 
-    // どの期間のデータを見るか決定
     let period = 'total';
     if(sortMode.includes('week')) period = 'week';
     if(sortMode.includes('month')) period = 'month';
 
-    // 🏆 【超重要】まず全員を現在の条件で降順ソートし、全体の「順位」を確定させる
+    // 全員をソートして順位確定
     let rankedData = [...allData].sort((a, b) => getVal(b, period) - getVal(a, period));
-    
-    // 順位（Rank）を付与
-    rankedData.forEach((user, index) => {
-      user.currentRank = index + 1;
-    });
+    rankedData.forEach((user, index) => { user.currentRank = index + 1; });
 
-    // 自分のデータを確保
+    // 自分の確保と表示用配列の作成
     const me = rankedData.find(u => u.id === 'user_me');
     let displayOthers = [];
 
-    // 表示用の配列を作成（昇順・降順・近い人）
     if (sortMode.includes('desc')) {
       displayOthers = rankedData.filter(u => u.id !== 'user_me');
     } else if (sortMode.includes('asc')) {
@@ -199,45 +188,62 @@
       displayOthers = rankedData.slice(start, end).filter(u => u.id !== 'user_me');
     }
 
-    // 必ず「自分」を一番左（配列の最初）に固定
     const finalArray = [me, ...displayOthers];
 
-    // グラフの横幅を人数に合わせて調整（人数が多いと横スクロールになる）
     document.getElementById('chart-box').style.width = Math.max(800, finalArray.length * 40) + 'px';
 
-    // ラベルとデータの生成
-    const labels = finalArray.map(u => {
-      if (u.id === 'user_me') return `⭐️ ${u.realName}`;
-      // トップ30位以内なら本名、それ以下ならイニシャル
-      if (u.currentRank <= 30) {
-        return `${u.currentRank}位: ${u.realName}`;
+    // グラフ用データの構築
+    const labels = [];
+    const schoolData = [];
+    const selfData = [];
+    const schoolColors = [];
+    const selfColors = [];
+
+    finalArray.forEach(u => {
+      // ラベルと色の割り当て（濃淡で2色表現）
+      if (u.id === 'user_me') {
+        labels.push(`⭐️ ${u.realName}`);
+        schoolColors.push('#c0392b'); // 自分・がっこう（濃い赤）
+        selfColors.push('#e74c3c');   // 自分・じぶん（明るい赤）
+      } else if (u.currentRank <= 30) {
+        labels.push(`${u.currentRank}位: ${u.realName}`);
+        schoolColors.push('#d35400'); // Top30・がっこう（濃いオレンジ）
+        selfColors.push('#f1c40f');   // Top30・じぶん（明るいゴールド）
       } else {
-        return `${u.currentRank}位: ${u.initial}`;
+        labels.push(`${u.currentRank}位: ${u.initial}`);
+        schoolColors.push('#2980b9'); // その他・がっこう（濃い青）
+        selfColors.push('#3498db');   // その他・じぶん（明るい青）
       }
+
+      schoolData.push(u.times[period].school);
+      selfData.push(u.times[period].self);
     });
 
-    const dataValues = finalArray.map(u => getVal(u, period));
-    
-    // 自分の棒グラフは赤系、トップ30位はゴールド系、それ以外は青系に色分け
-    const colors = finalArray.map(u => {
-      if (u.id === 'user_me') return '#e74c3c'; // 赤（自分）
-      if (u.currentRank <= 30) return '#f1c40f'; // ゴールド（トップ30殿堂入り）
-      return '#3498db'; // 青（その他）
-    });
-
-    // グラフを更新
+    // データのセット
     analysisChart.data.labels = labels;
-    analysisChart.data.datasets[0].data = dataValues;
-    analysisChart.data.datasets[0].backgroundColor = colors;
+    analysisChart.data.datasets[0].data = schoolData;
+    analysisChart.data.datasets[0].backgroundColor = schoolColors;
+    analysisChart.data.datasets[1].data = selfData;
+    analysisChart.data.datasets[1].backgroundColor = selfColors;
     
-    // 縦軸のタイトル変更
-    let axisLabel = viewType === 'school' ? 'がっこうの時間' : viewType === 'self' ? 'じぶんの学習' : '総合時間';
-    analysisChart.options.scales.y.title.text = axisLabel + '（分）';
+    // フィルターに応じた表示/非表示の切り替え
+    if (viewType === 'all') {
+      analysisChart.setDatasetVisibility(0, true);
+      analysisChart.setDatasetVisibility(1, true);
+      analysisChart.options.scales.y.title.text = '総合時間（分）';
+    } else if (viewType === 'school') {
+      analysisChart.setDatasetVisibility(0, true);
+      analysisChart.setDatasetVisibility(1, false);
+      analysisChart.options.scales.y.title.text = 'がっこうの時間（分）';
+    } else if (viewType === 'self') {
+      analysisChart.setDatasetVisibility(0, false);
+      analysisChart.setDatasetVisibility(1, true);
+      analysisChart.options.scales.y.title.text = 'じぶんの学習（分）';
+    }
 
     analysisChart.update();
   }
 
-  // 初期化実行
   initChart();
   updateChart();
 
