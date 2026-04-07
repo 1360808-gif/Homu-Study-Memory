@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学習ダッシュボード</title>
+<title>比較・分析ページ</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   body {
@@ -18,220 +18,211 @@
   .app-container {
     background: #fff;
     width: 95%;
-    max-width: 600px;
+    max-width: 800px; /* グラフが見やすいように少し広めに設定 */
     border-radius: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     padding: 20px;
     text-align: center;
   }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
-  h2 { font-size: 18px; color: #34495e; margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
   
-  .section {
-    background-color: #fdfdfd;
-    border: 1px solid #ecf0f1;
-    border-radius: 15px;
-    padding: 15px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-  }
-
-  /* 🌟 全体フィルターのデザイン */
-  .global-filter {
-    display: flex;
-    justify-content: space-around;
-    background-color: #ffeaa7; /* 目立つように少し色を変えています */
+  .controls {
+    background-color: #e8f4f8;
     padding: 15px;
     border-radius: 10px;
-    margin-bottom: 25px;
-    border: 2px solid #fdcb6e;
-  }
-  .global-filter label {
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
+    margin-bottom: 20px;
     display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
     align-items: center;
-    gap: 5px;
   }
-
-  /* 学年全体ゲージのデザイン */
-  .goal-text { font-size: 16px; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
-  .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; width: 100%; position: relative; overflow: hidden; }
-  .progress-bar {
-    background: linear-gradient(90deg, #f1c40f, #f39c12);
-    height: 100%; width: 0%; /* JSで動かします */
-    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; border-radius: 10px 0 0 10px; transition: width 0.5s ease;
+  .controls select {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #bdc3c7;
+    background-color: #fff;
+    cursor: pointer;
   }
   
-  .chart-container { position: relative; height: 250px; width: 100%; }
+  .note {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-bottom: 15px;
+    text-align: left;
+  }
 
-  /* 先生用設定 */
-  .teacher-section { background-color: #eee; border: 2px dashed #bdc3c7; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: left; }
-  .teacher-section h3 { margin: 0 0 10px 0; font-size: 14px; color: #7f8c8d; }
-  .class-setting { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 14px; }
-  .class-setting input { width: 50px; padding: 2px; text-align: center; }
+  .chart-container {
+    position: relative;
+    height: 400px; /* 棒グラフをたくさん並べるため高めに設定 */
+    width: 100%;
+    margin-bottom: 20px;
+  }
 
-  button.main-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background-color: #95a5a6; border: none; border-radius: 10px; cursor: pointer; }
+  button.main-btn {
+    width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff;
+    background-color: #95a5a6; border: none; border-radius: 10px; cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  button.main-btn:active { background-color: #7f8c8d; }
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>🌟 〇年生 がんばりダッシュボード</h1>
+  <h1>🔍 じぶんとみんなの「がんばり分析」</h1>
 
-  <div class="global-filter">
-    <label><input type="radio" name="viewType" value="all" checked onchange="updateDashboard()"> ぜんぶ</label>
-    <label><input type="radio" name="viewType" value="school" onchange="updateDashboard()"> がっこう</label>
-    <label><input type="radio" name="viewType" value="self" onchange="updateDashboard()"> じぶん</label>
+  <div class="controls">
+    <label style="font-weight: bold; color: #2980b9;">どんな順番でくらべる？</label>
+    <select id="sort-mode" onchange="updateChart()">
+      <option value="total-desc">🏆 全体：長い順（トップ層をみる）</option>
+      <option value="total-asc">🌱 全体：短い順</option>
+      <option value="week-desc">🔥 今週：長い順（今週のがんばり屋）</option>
+      <option value="month-desc">📅 今月：長い順</option>
+      <option value="close-to-me" selected>🤝 自分と近い人（前後約10人）</option>
+    </select>
   </div>
 
-  <div class="teacher-section">
-    <h3>👨‍🏫 先生用：分母調整（平均グラフ用）</h3>
-    <div class="class-setting">1組: 除外 <input type="number" id="exclude-1" min="0" value="0" onchange="updateDashboard()"> 名</div>
-    <div class="class-setting">2組: 除外 <input type="number" id="exclude-2" min="0" value="0" onchange="updateDashboard()"> 名</div>
-    <div class="class-setting">3組: 除外 <input type="number" id="exclude-3" min="0" value="0" onchange="updateDashboard()"> 名</div>
+  <p class="note">※ プライバシーのため、他の人はイニシャルで表示されています。一番左の赤いグラフが「あなた」です。</p>
+
+  <div class="chart-container">
+    <canvas id="analysisChart"></canvas>
   </div>
 
-  <div class="section">
-    <h2 id="goal-title">🤝 みんなで達成しよう！（ぜんぶ）</h2>
-    <p class="goal-text" id="goal-text">計算中...</p>
-    <div class="progress-bg">
-      <div class="progress-bar" id="progress-bar">0%</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>🔥 クラス対抗！ 1人あたりの平均時間</h2>
-    <div class="chart-container">
-      <canvas id="classChart"></canvas>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>👤 あなたのがんばり（青木 太郎 さん）</h2>
-    <div class="chart-container">
-      <canvas id="personalChart"></canvas>
-    </div>
-  </div>
-
-  <button class="main-btn" onclick="alert('入力画面にもどります')">最初の画面にもどる</button>
+  <button class="main-btn" onclick="alert('ダッシュボードにもどります')">ダッシュボードにもどる</button>
 
 </div>
 
 <script>
-  // ＝ データの準備 ＝
-  // クラスごとの「がっこう」と「じぶん」の合計時間を分けて持ちます
-  const classData = {
-    "1組": { schoolTime: 4200, selfTime: 2100, baseStudents: 30 },
-    "2組": { schoolTime: 4900, selfTime: 2450, baseStudents: 30 },
-    "3組": { schoolTime: 3800, selfTime: 1900, baseStudents: 30 }
-  };
+  // ＝ 疑似データ（15人分） ＝
+  // 実際のシステムではデータベースから取得します
+  const myId = "user_me";
+  const allData = [
+    { id: "user_me", name: "自分 (青木)", total: 12500, month: 3200, week: 800 },
+    { id: "u1", name: "A.S さん", total: 15000, month: 4000, week: 1000 },
+    { id: "u2", name: "B.K さん", total: 14200, month: 3800, week: 950 },
+    { id: "u3", name: "C.Y さん", total: 13800, month: 3600, week: 900 },
+    { id: "u4", name: "D.M さん", total: 13100, month: 3500, week: 850 },
+    { id: "u5", name: "E.T さん", total: 12800, month: 3300, week: 820 },
+    { id: "u6", name: "F.N さん", total: 12400, month: 3100, week: 780 },
+    { id: "u7", name: "G.R さん", total: 12100, month: 3000, week: 750 },
+    { id: "u8", name: "H.W さん", total: 11800, month: 2900, week: 700 },
+    { id: "u9", name: "I.O さん", total: 11200, month: 2800, week: 680 },
+    { id: "u10", name: "J.H さん", total: 10500, month: 2500, week: 600 },
+    { id: "u11", name: "K.I さん", total: 9800, month: 2200, week: 550 },
+    { id: "u12", name: "L.A さん", total: 8500, month: 2000, week: 500 },
+    { id: "u13", name: "M.S さん", total: 7200, month: 1800, week: 450 },
+    { id: "u14", name: "N.E さん", total: 6000, month: 1500, week: 400 }
+  ];
 
-  // 学年全体の目標設定
-  const goalSettings = {
-    all: { title: "（ぜんぶ）", target: 30000, color: "linear-gradient(90deg, #f1c40f, #f39c12)" },
-    school: { title: "（がっこうの勉強）", target: 18000, color: "linear-gradient(90deg, #3498db, #2980b9)" },
-    self: { title: "（じぶんの学習）", target: 12000, color: "linear-gradient(90deg, #e74c3c, #c0392b)" }
-  };
+  // グラフの設定用変数
+  let analysisChart;
+  const ctx = document.getElementById('analysisChart').getContext('2d');
 
-  // ＝ グラフの初期設定 ＝
-
-  // ② クラス対抗グラフ（積み上げ式に変更）
-  const classCtx = document.getElementById('classChart').getContext('2d');
-  let classChart = new Chart(classCtx, {
-    type: 'bar',
-    data: {
-      labels: ['1組', '2組', '3組'],
-      datasets: [
-        { label: 'がっこう', data: [0,0,0], backgroundColor: '#2980b9' }, // Index 0
-        { label: 'じぶん', data: [0,0,0], backgroundColor: '#c0392b' }  // Index 1
-      ]
-    },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: { x: { stacked: true, title: { display: true, text: '平均時間（分）' } }, y: { stacked: true } }
-    }
-  });
-
-  // ③ 個人の記録グラフ
-  const personalCtx = document.getElementById('personalChart').getContext('2d');
-  let personalChart = new Chart(personalCtx, {
-    type: 'bar',
-    data: {
-      labels: ['1週目', '2週目', '3週目', '今週'],
-      datasets: [
-        { label: 'がっこう', data: [120, 150, 130, 90], backgroundColor: '#2980b9' }, // Index 0
-        { label: 'じぶん', data: [60, 40, 80, 120], backgroundColor: '#c0392b' }  // Index 1
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間（分）' } } }
-    }
-  });
-
-  // ＝ ✨ すべてを連動して更新するメイン関数 ＝
-  function updateDashboard() {
-    // 1. 選択されているフィルターを取得
-    const filter = document.querySelector('input[name="viewType"]:checked').value;
-    
-    // 2. 先生の設定（除外人数）を取得し、計算用人数を出す
-    const ex1 = parseInt(document.getElementById('exclude-1').value) || 0;
-    const ex2 = parseInt(document.getElementById('exclude-2').value) || 0;
-    const ex3 = parseInt(document.getElementById('exclude-3').value) || 0;
-    const active1 = Math.max(1, classData["1組"].baseStudents - ex1);
-    const active2 = Math.max(1, classData["2組"].baseStudents - ex2);
-    const active3 = Math.max(1, classData["3組"].baseStudents - ex3);
-
-    // --- ① 学年全体の更新 ---
-    let currentTotal = 0;
-    if (filter === 'all' || filter === 'school') {
-      currentTotal += classData["1組"].schoolTime + classData["2組"].schoolTime + classData["3組"].schoolTime;
-    }
-    if (filter === 'all' || filter === 'self') {
-      currentTotal += classData["1組"].selfTime + classData["2組"].selfTime + classData["3組"].selfTime;
-    }
-    
-    const goal = goalSettings[filter];
-    const percentage = Math.min(100, Math.round((currentTotal / goal.target) * 100));
-    const remaining = Math.max(0, goal.target - currentTotal);
-
-    document.getElementById('goal-title').innerText = `🤝 みんなで達成しよう！${goal.title}`;
-    document.getElementById('goal-text').innerText = `目標 ${goal.target.toLocaleString()}分 まで、あと ${remaining.toLocaleString()}分！`;
-    
-    const bar = document.getElementById('progress-bar');
-    bar.style.width = percentage + '%';
-    bar.style.background = goal.color;
-    bar.innerText = `${currentTotal.toLocaleString()}分 (${percentage}%)`;
-
-    // --- ② クラス対抗グラフの更新 ---
-    // データの再計算
-    classChart.data.datasets[0].data = [
-      Math.round(classData["1組"].schoolTime / active1),
-      Math.round(classData["2組"].schoolTime / active2),
-      Math.round(classData["3組"].schoolTime / active3)
-    ];
-    classChart.data.datasets[1].data = [
-      Math.round(classData["1組"].selfTime / active1),
-      Math.round(classData["2組"].selfTime / active2),
-      Math.round(classData["3組"].selfTime / active3)
-    ];
-
-    // 表示・非表示の切り替え
-    classChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
-    classChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
-    classChart.update();
-
-    // --- ③ 個人の記録グラフの更新 ---
-    personalChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
-    personalChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
-    personalChart.update();
+  function initChart() {
+    analysisChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [], // 名前が入ります
+        datasets: [{
+          label: '学習時間（分）',
+          data: [], // 時間が入ります
+          backgroundColor: [], // 色（自分だけ変えます）
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) { return context.raw + ' 分'; }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: '時間（分）' } }
+        }
+      }
+    });
   }
 
-  // 画面を開いたときに一度実行する
-  updateDashboard();
-</script>
+  // データの並び替えとグラフの更新処理
+  function updateChart() {
+    const mode = document.getElementById('sort-mode').value;
+    
+    // 自分のデータを取得
+    const me = allData.find(d => d.id === myId);
+    let others = allData.filter(d => d.id !== myId);
+    let displayData = [];
+    let dataKey = 'total'; // グラフに表示する数値の種類
 
+    // 並び替えのロジック
+    if (mode === 'total-desc') {
+      dataKey = 'total';
+      others.sort((a, b) => b.total - a.total);
+      displayData = others;
+    } 
+    else if (mode === 'total-asc') {
+      dataKey = 'total';
+      others.sort((a, b) => a.total - b.total);
+      displayData = others;
+    } 
+    else if (mode === 'week-desc') {
+      dataKey = 'week';
+      others.sort((a, b) => b.week - a.week);
+      displayData = others;
+    } 
+    else if (mode === 'month-desc') {
+      dataKey = 'month';
+      others.sort((a, b) => b.month - a.month);
+      displayData = others;
+    } 
+    else if (mode === 'close-to-me') {
+      dataKey = 'total';
+      // 一旦全員をトータルで降順に並べる
+      const sortedAll = [...allData].sort((a, b) => b.total - a.total);
+      const myIndex = sortedAll.findIndex(d => d.id === myId);
+      
+      // 自分の前後5人（合計最大10人）を切り出す
+      const start = Math.max(0, myIndex - 5);
+      const end = Math.min(sortedAll.length, myIndex + 6);
+      
+      // 切り出したリストから自分を抜き取る（後で先頭にくっつけるため）
+      displayData = sortedAll.slice(start, end).filter(d => d.id !== myId);
+    }
+
+    // ★重要★ 必ず「自分」を配列の1番最初（index 0）に固定する
+    const finalArray = [me, ...displayData];
+
+    // Chart.js用の配列を作成
+    const labels = finalArray.map(d => d.name);
+    const dataValues = finalArray.map(d => d[dataKey]);
+    
+    // 自分の棒グラフは赤系、他の人は青系で視覚的に区別する
+    const colors = finalArray.map(d => d.id === myId ? '#e74c3c' : '#3498db');
+
+    // グラフにデータをセットして更新
+    analysisChart.data.labels = labels;
+    analysisChart.data.datasets[0].data = dataValues;
+    analysisChart.data.datasets[0].backgroundColor = colors;
+    
+    // 縦軸のタイトルも切り替える
+    let axisLabel = '総合時間（分）';
+    if(dataKey === 'week') axisLabel = '今週の時間（分）';
+    if(dataKey === 'month') axisLabel = '今月の時間（分）';
+    analysisChart.options.scales.y.title.text = axisLabel;
+
+    analysisChart.update();
+  }
+
+  // 画面を開いた時の初期化
+  initChart();
+  updateChart();
+
+</script>
 </body>
 </html>
