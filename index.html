@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学習きろくアプリ（プロトタイプ）</title>
+<title>学年学習きろくアプリ</title>
 <style>
-  /* ＝ タブレット向けの全体デザイン ＝ */
   body {
     font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background-color: #f0f8ff; /* 優しい水色 */
+    background-color: #f0f8ff;
     color: #333;
     display: flex;
     justify-content: center;
@@ -30,14 +29,9 @@
     color: #2c3e50;
     margin-bottom: 30px;
   }
-  /* ＝ 画面の切り替え用 ＝ */
-  .step {
-    display: none; /* 最初はすべて非表示 */
-  }
-  .step.active {
-    display: block; /* activeクラスがついたものだけ表示 */
-  }
-  /* ＝ フォーム・ボタンのデザイン（子供が押しやすいように大きく） ＝ */
+  .step { display: none; }
+  .step.active { display: block; }
+  
   select, input {
     width: 100%;
     padding: 15px;
@@ -53,14 +47,9 @@
     gap: 10px;
     margin-bottom: 20px;
   }
-  .time-input-container input {
-    width: 45%;
-    margin-bottom: 0;
-  }
-  .time-input-container span {
-    font-size: 20px;
-    align-self: center;
-  }
+  .time-input-container input { width: 45%; margin-bottom: 0; }
+  .time-input-container span { font-size: 20px; align-self: center; }
+  
   button {
     width: 100%;
     padding: 15px;
@@ -73,35 +62,50 @@
     cursor: pointer;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     transition: background-color 0.2s;
+    margin-bottom: 15px;
   }
   button:active {
     background-color: #2980b9;
     transform: translateY(2px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
-  .back-btn {
-    background-color: #95a5a6;
-    margin-top: 15px;
+  .back-btn { background-color: #95a5a6; margin-top: 15px; }
+  .back-btn:active { background-color: #7f8c8d; }
+
+  /* クラス選択ボタン用のデザイン */
+  .class-btn-container {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
   }
-  .back-btn:active {
-    background-color: #7f8c8d;
+  .class-btn {
+    background-color: #f39c12;
+    margin-bottom: 0;
   }
+  .class-btn:active { background-color: #e67e22; }
+
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>✏️ クラス学習きろく</h1>
+  <h1>🏫 〇年生 学習きろく</h1>
 
-  <div id="step-name" class="step active">
-    <p>自分の名前をえらんでね</p>
+  <div id="step-class" class="step active">
+    <p>自分のクラスをえらんでね</p>
+    <div class="class-btn-container">
+      <button class="class-btn" onclick="selectClass('1組')">1組</button>
+      <button class="class-btn" onclick="selectClass('2組')">2組</button>
+      <button class="class-btn" onclick="selectClass('3組')">3組</button>
+    </div>
+  </div>
+
+  <div id="step-name" class="step">
+    <p><span id="display-class" style="font-weight:bold; color:#e67e22;"></span> のみんな</p>
     <select id="user-select">
-      <option value="">-- なまえをえらぶ --</option>
-      <option value="1">1番: 青木 太郎</option>
-      <option value="2">2番: 伊藤 花子</option>
-      <option value="3">3番: 宇田川 健太</option>
-    </select>
+      </select>
     <button onclick="goToPassword()">つぎへ</button>
+    <button class="back-btn" onclick="showStep('step-class')">クラスをえらびなおす</button>
   </div>
 
   <div id="step-password" class="step">
@@ -113,52 +117,62 @@
 
   <div id="step-input" class="step">
     <p>今週のがんばりを記録しよう！</p>
-    
     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
       <p style="font-size: 14px; color: #666; text-align: left; margin: 0 0 10px 0;">📅 いつから？</p>
       <input type="date" id="date-input" style="margin-bottom: 0;">
     </div>
-    
     <div style="background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-      <p style="font-size: 16px; font-weight: bold; color: #2980b9; text-align: left; margin: 0 0 10px 0;">① がっこうの勉強（宿題・ふくしゅう）</p>
+      <p style="font-size: 16px; font-weight: bold; color: #2980b9; text-align: left; margin: 0 0 10px 0;">① がっこうの勉強</p>
       <div class="time-input-container" style="margin-bottom: 0;">
         <input type="number" id="school-hour-input" min="0" placeholder="0"> <span>時間</span>
         <input type="number" id="school-minute-input" min="0" max="59" placeholder="0"> <span>分</span>
       </div>
     </div>
-
     <div style="background-color: #fff0f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-      <p style="font-size: 16px; font-weight: bold; color: #c0392b; text-align: left; margin: 0 0 10px 0;">② じぶんの学習（読書・プログラミング等）</p>
+      <p style="font-size: 16px; font-weight: bold; color: #c0392b; text-align: left; margin: 0 0 10px 0;">② じぶんの学習</p>
       <div class="time-input-container" style="margin-bottom: 0;">
         <input type="number" id="self-hour-input" min="0" placeholder="0"> <span>時間</span>
         <input type="number" id="self-minute-input" min="0" max="59" placeholder="0"> <span>分</span>
       </div>
     </div>
-
     <button onclick="submitData()" style="background-color: #2ecc71;">記録する！</button>
-    <button class="back-btn" onclick="showStep('step-name')">はじめから</button>
+    <button class="back-btn" onclick="showStep('step-class')">はじめから</button>
   </div>
 
   <div id="step-complete" class="step">
     <h2>🎉 記録完了！</h2>
     <p>よくがんばりました！<br>みんなのグラフを見てみよう。</p>
-    <button onclick="showStep('step-name')">最初の画面にもどる</button>
+    <button onclick="showStep('step-class')">最初の画面にもどる</button>
   </div>
 
 </div>
 
 <script>
-  // ※本来はデータベースで管理しますが、今回はテスト用にブラウザのメモリに保存します。
+  // 疑似データベース（クラスごとの名簿データ）
+  const gradeData = {
+    "1組": [
+      { id: "1-1", name: "1番: 青木 太郎" },
+      { id: "1-2", name: "2番: 伊藤 花子" }
+    ],
+    "2組": [
+      { id: "2-1", name: "1番: 宇田川 健太" },
+      { id: "2-2", name: "2番: 江藤 翔太" }
+    ],
+    "3組": [
+      { id: "3-1", name: "1番: 岡田 さくら" },
+      { id: "3-2", name: "2番: 加藤 蓮" }
+    ]
+  };
+
   const mockDatabase = {}; 
+  let selectedClass = "";
   let selectedUser = "";
 
-  // 画面を切り替える関数
   function showStep(stepId) {
     document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
     document.getElementById(stepId).classList.add('active');
     
-    // 入力欄をリセット
-    if(stepId === 'step-name') {
+    if(stepId === 'step-class') {
       document.getElementById('password-input').value = "";
       document.getElementById('school-hour-input').value = "";
       document.getElementById('school-minute-input').value = "";
@@ -167,7 +181,22 @@
     }
   }
 
-  // 「つぎへ」ボタン（名前選択後）
+  // クラス選択時の処理
+  function selectClass(className) {
+    selectedClass = className;
+    document.getElementById('display-class').innerText = className;
+    
+    // 選んだクラスの名簿をドロップダウンにセットする
+    const selectEl = document.getElementById('user-select');
+    selectEl.innerHTML = '<option value="">-- なまえをえらぶ --</option>';
+    
+    gradeData[className].forEach(user => {
+      selectEl.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+    });
+
+    showStep('step-name');
+  }
+
   function goToPassword() {
     selectedUser = document.getElementById('user-select').value;
     if (selectedUser === "") {
@@ -175,7 +204,6 @@
       return;
     }
     const msg = document.getElementById('password-message');
-    // すでにパスワードが登録されているかチェック
     if (mockDatabase[selectedUser]) {
       msg.innerHTML = "パスワードを入れてね<br>（4ケタのすうじ）";
     } else {
@@ -184,7 +212,6 @@
     showStep('step-password');
   }
 
-  // 「OK」ボタン（パスワード確認）
   function checkPassword() {
     const passInput = document.getElementById('password-input').value;
     if (passInput.length !== 4) {
@@ -192,52 +219,41 @@
       return;
     }
     if (mockDatabase[selectedUser]) {
-      // 登録済みの場合：答え合わせ
       if (mockDatabase[selectedUser] === passInput) {
         showStep('step-input'); 
       } else {
         alert("パスワードがちがいます。");
       }
     } else {
-      // 未登録の場合：新規登録
       mockDatabase[selectedUser] = passInput;
       alert("パスワードを登録しました！わすれないようにね。");
       showStep('step-input');
     }
   }
 
-  // 「記録する！」ボタン
   function submitData() {
     const date = document.getElementById('date-input').value;
-    
-    // 学業に関わる時間
     const schoolHour = document.getElementById('school-hour-input').value || 0;
     const schoolMinute = document.getElementById('school-minute-input').value || 0;
     const schoolTotalMinutes = parseInt(schoolHour) * 60 + parseInt(schoolMinute);
-
-    // それ以外の自主学習
     const selfHour = document.getElementById('self-hour-input').value || 0;
     const selfMinute = document.getElementById('self-minute-input').value || 0;
     const selfTotalMinutes = parseInt(selfHour) * 60 + parseInt(selfMinute);
 
     if (!date) {
-      alert("日付をえらんでね！");
-      return;
+      alert("日付をえらんでね！"); return;
     }
-    // どちらも0分だった場合のエラーチェック
     if (schoolTotalMinutes === 0 && selfTotalMinutes === 0) {
-      alert("どちらかの時間を入力してね！");
-      return;
+      alert("どちらかの時間を入力してね！"); return;
     }
 
-    // --- ここで本来はGoogleスプレッドシート（GAS）等にデータを送ります ---
     console.log("送信データ:", {
+      class: selectedClass,
       user: selectedUser,
       date: date,
       schoolStudyTime: schoolTotalMinutes,
       selfStudyTime: selfTotalMinutes
     });
-    // --------------------------------------------------------
 
     showStep('step-complete');
   }
