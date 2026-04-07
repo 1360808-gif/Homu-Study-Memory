@@ -36,7 +36,7 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
   }
 
-  /* ＝ 学年全体ゲージのデザイン ＝ */
+  /* 学年全体ゲージのデザイン */
   .goal-text { font-size: 16px; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
   .progress-bg {
     background-color: #ecf0f1;
@@ -49,7 +49,7 @@
   .progress-bar {
     background: linear-gradient(90deg, #f1c40f, #f39c12);
     height: 100%;
-    width: 65%; /* ここでゲージの長さを変えます（例: 65%） */
+    width: 65%;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -57,16 +57,39 @@
     color: white;
     font-weight: bold;
     border-radius: 10px 0 0 10px;
-    transition: width 1s ease-in-out;
   }
   
-  .chart-container {
-    position: relative;
-    height: 250px;
-    width: 100%;
+  .chart-container { position: relative; height: 250px; width: 100%; }
+
+  /* 先生用設定エリアのデザイン */
+  .teacher-section {
+    background-color: #ffeaa7; /* 注意を引く黄色系 */
+    border: 2px dashed #fdcb6e;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  .teacher-section h3 { margin: 0 0 10px 0; font-size: 16px; color: #d35400; }
+  .class-setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.7);
+    padding: 8px;
+    border-radius: 5px;
+  }
+  .class-setting input {
+    width: 60px;
+    padding: 5px;
+    font-size: 16px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
   }
 
-  button {
+  button.main-btn {
     width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff;
     background-color: #95a5a6; border: none; border-radius: 10px; cursor: pointer;
   }
@@ -77,13 +100,32 @@
 <div class="app-container">
   <h1>🌟 〇年生 がんばりダッシュボード</h1>
 
+  <div class="teacher-section">
+    <h3>👨‍🏫 先生用：平均計算の調整（プロトタイプ機能）</h3>
+    <p style="font-size: 12px; color: #555; margin-bottom: 10px;">
+      ※長期欠席などで学習に参加できない児童を、平均計算の分母から除外できます。（グラフがリアルタイムで再計算されます）
+    </p>
+    
+    <div class="class-setting">
+      <span>1組 (在籍30名)</span>
+      <div>除外: <input type="number" id="exclude-1" min="0" max="30" value="0" onchange="updateChart()"> 名</div>
+    </div>
+    <div class="class-setting">
+      <span>2組 (在籍30名)</span>
+      <div>除外: <input type="number" id="exclude-2" min="0" max="30" value="0" onchange="updateChart()"> 名</div>
+    </div>
+    <div class="class-setting">
+      <span>3組 (在籍30名)</span>
+      <div>除外: <input type="number" id="exclude-3" min="0" max="30" value="0" onchange="updateChart()"> 名</div>
+    </div>
+  </div>
+
   <div class="section">
     <h2>🤝 みんなで達成しよう！（学年合計）</h2>
     <p class="goal-text">目標 10,000時間 まで、あと 3,500時間！</p>
     <div class="progress-bg">
       <div class="progress-bar">6,500時間 (65%)</div>
     </div>
-    <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">みんなの記録が合わさって、どんどん伸びていくよ！</p>
   </div>
 
   <div class="section">
@@ -92,7 +134,7 @@
       <canvas id="classChart"></canvas>
     </div>
     <p style="font-size: 12px; color: #7f8c8d; text-align: left; margin-top: 10px;">
-      ※人数が違っても公平になるように、「1人あたりの平均」で比べています。
+      ※みんなが公平にがんばれるように、先生のほうで人数の調整を行って計算しています。
     </p>
   </div>
 
@@ -103,76 +145,82 @@
     </div>
   </div>
 
-  <button onclick="alert('入力画面にもどります（プロトタイプ）')">最初の画面にもどる</button>
+  <button class="main-btn" onclick="alert('入力画面にもどります')">最初の画面にもどる</button>
 
 </div>
 
 <script>
-  // ＝ ② クラス対抗グラフ（横向き棒グラフ）の設定 ＝
+  // ＝ データの準備（今週のクラスごとの総学習時間と、基本の在籍人数） ＝
+  // ※この総時間は、生徒たちが入力したデータの合計値です。
+  const classData = {
+    "1組": { totalTime: 6300, baseStudents: 30 }, // 例: 6300分 (1人あたり210分)
+    "2組": { totalTime: 7350, baseStudents: 30 }, // 例: 7350分 (1人あたり245分)
+    "3組": { totalTime: 5700, baseStudents: 30 }  // 例: 5700分 (1人あたり190分)
+  };
+
+  // ＝ グラフの初期設定 ＝
   const classCtx = document.getElementById('classChart').getContext('2d');
-  new Chart(classCtx, {
+  let classChart = new Chart(classCtx, {
     type: 'bar',
     data: {
       labels: ['1組', '2組', '3組'],
       datasets: [{
         label: '1人あたりの平均時間（分）',
-        data: [210, 245, 190], // ダミーデータ
-        backgroundColor: [
-          'rgba(52, 152, 219, 0.7)', // 1組: 青
-          'rgba(231, 76, 60, 0.7)',  // 2組: 赤
-          'rgba(46, 204, 113, 0.7)'  // 3組: 緑
-        ],
-        borderColor: [
-          'rgba(52, 152, 219, 1)',
-          'rgba(231, 76, 60, 1)',
-          'rgba(46, 204, 113, 1)'
-        ],
+        data: [0, 0, 0], // データは後で計算して入れます
+        backgroundColor: ['rgba(52, 152, 219, 0.7)', 'rgba(231, 76, 60, 0.7)', 'rgba(46, 204, 113, 0.7)'],
+        borderColor: ['rgba(52, 152, 219, 1)', 'rgba(231, 76, 60, 1)', 'rgba(46, 204, 113, 1)'],
         borderWidth: 1
       }]
     },
     options: {
-      indexAxis: 'y', // 横向きにする設定
+      indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
-        x: { beginAtZero: true, title: { display: true, text: '平均時間（分）' } }
-      },
-      plugins: {
-        legend: { display: false } // ラベルを隠す
-      }
+      scales: { x: { beginAtZero: true, title: { display: true, text: '平均時間（分）' } } },
+      plugins: { legend: { display: false } }
     }
   });
 
-  // ＝ ③ 個人の記録グラフ（積み上げ棒グラフ）の設定 ＝
+  // ＝ 平均を計算してグラフを更新する機能 ＝
+  function updateChart() {
+    // 先生が入力した除外人数を取得
+    const ex1 = parseInt(document.getElementById('exclude-1').value) || 0;
+    const ex2 = parseInt(document.getElementById('exclude-2').value) || 0;
+    const ex3 = parseInt(document.getElementById('exclude-3').value) || 0;
+
+    // 分母（計算に使う人数）を出す： 基本人数 - 除外人数
+    // ※もし全員除外(0人)になってしまったら、エラーを防ぐため強制的に1にします。
+    const active1 = Math.max(1, classData["1組"].baseStudents - ex1);
+    const active2 = Math.max(1, classData["2組"].baseStudents - ex2);
+    const active3 = Math.max(1, classData["3組"].baseStudents - ex3);
+
+    // 新しい平均時間を計算： 総時間 ÷ 計算に使う人数
+    const avg1 = Math.round(classData["1組"].totalTime / active1);
+    const avg2 = Math.round(classData["2組"].totalTime / active2);
+    const avg3 = Math.round(classData["3組"].totalTime / active3);
+
+    // グラフのデータを書き換えて更新
+    classChart.data.datasets[0].data = [avg1, avg2, avg3];
+    classChart.update();
+  }
+
+  // 画面を開いたときに一度計算を実行する
+  updateChart();
+
+  // ＝ 個人の記録グラフ（変更なし） ＝
   const personalCtx = document.getElementById('personalChart').getContext('2d');
   new Chart(personalCtx, {
     type: 'bar',
     data: {
       labels: ['1週目', '2週目', '3週目', '今週'],
       datasets: [
-        {
-          label: 'がっこうの勉強',
-          data: [120, 150, 130, 90], // ダミーデータ
-          backgroundColor: '#2980b9' // 薄い青
-        },
-        {
-          label: 'じぶんの学習',
-          data: [60, 40, 80, 120], // ダミーデータ
-          backgroundColor: '#c0392b' // 薄い赤
-        }
+        { label: 'がっこうの勉強', data: [120, 150, 130, 90], backgroundColor: '#2980b9' },
+        { label: 'じぶんの学習', data: [60, 40, 80, 120], backgroundColor: '#c0392b' }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true }, // 横軸を積み上げにする
-        y: { 
-          stacked: true,      // 縦軸を積み上げにする
-          beginAtZero: true,
-          title: { display: true, text: '時間（分）' }
-        }
-      }
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間（分）' } } }
     }
   });
 </script>
