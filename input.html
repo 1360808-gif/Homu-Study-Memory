@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>がんばり入力 - 学習アプリ</title>
+    <style>
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #fffbe6; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .input-container { background: #fff; width: 90%; max-width: 400px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; text-align: center; }
+        h1 { font-size: 20px; color: #d35400; margin-bottom: 20px; }
+        .user-info { background: #fef9e7; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; color: #7f8c8d; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #2c3e50; }
+        input[type="number"] { width: 100%; padding: 15px; border: 2px solid #f39c12; border-radius: 10px; font-size: 24px; text-align: center; box-sizing: border-box; }
+        .unit { text-align: right; font-weight: bold; color: #7f8c8d; margin-top: 5px; }
+        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-submit:active { transform: scale(0.98); background-color: #d35400; }
+        .btn-submit:disabled { background-color: #bdc3c7; }
+        .btn-back { background: none; border: none; color: #7f8c8d; text-decoration: underline; margin-top: 20px; cursor: pointer; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="input-container">
+    <h1>✏️ がんばった時間をいれる</h1>
+    <div id="user-display" class="user-info">読み込み中...</div>
+
+    <div class="input-group">
+        <label>🏫 がっこうの勉強（授業など）</label>
+        <input type="number" id="school-time" placeholder="0" inputmode="numeric">
+        <div class="unit">分</div>
+    </div>
+
+    <div class="input-group">
+        <label>🏠 じぶんの学習（自主学習など）</label>
+        <input type="number" id="self-time" placeholder="0" inputmode="numeric">
+        <div class="unit">分</div>
+    </div>
+
+    <button id="submit-btn" class="btn-submit">送信する！</button>
+    <button class="btn-back" id="back-btn">もどる</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+        authDomain: "study-app-4215b.firebaseapp.com",
+        projectId: "study-app-4215b",
+        storageBucket: "study-app-4215b.firebasestorage.app",
+        messagingSenderId: "896254140020",
+        appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // URLから情報を取得
+    const params = new URLSearchParams(window.location.search);
+    const myName = params.get('name');
+    const myClass = params.get('class');
+
+    if (!myName || !myClass) {
+        alert("名前とクラスがわかりません。ログインしなおしてください。");
+        location.href = "index.html";
+    }
+
+    document.getElementById('user-display').innerText = `${myClass}組：${myName} さん`;
+
+    // 送信ボタンの処理
+    document.getElementById('submit-btn').onclick = async () => {
+        const schoolTime = parseInt(document.getElementById('school-time').value) || 0;
+        const selfTime = parseInt(document.getElementById('self-time').value) || 0;
+
+        if (schoolTime === 0 && selfTime === 0) {
+            alert("時間を入力してね！");
+            return;
+        }
+
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.innerText = "送信中...";
+
+        try {
+            await addDoc(collection(db, "learning_logs"), {
+                name: myName,
+                class: myClass,
+                school: schoolTime,
+                self: selfTime,
+                date: new Date().toLocaleDateString('ja-JP'), // 今日の日付を文字列で保存
+                timestamp: serverTimestamp() // 並び替え用の時刻データ
+            });
+
+            alert("送信しました！");
+            // ダッシュボードに戻る
+            location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+
+        } catch (e) {
+            console.error("Error adding document: ", e);
+            alert("エラーが起きました。もういちど試してください。");
+            btn.disabled = false;
+            btn.innerText = "送信する！";
+        }
+    };
+
+    // もどるボタン
+    document.getElementById('back-btn').onclick = () => {
+        location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+    };
+</script>
+</body>
+</html>
