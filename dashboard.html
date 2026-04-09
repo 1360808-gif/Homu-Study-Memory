@@ -6,7 +6,6 @@
 <title>学習ダッシュボード</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  /* 元のデザインをそのまま継承 */
   body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
   .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
@@ -56,6 +55,7 @@
   </div>
 
   <button class="nav-btn" onclick="goToInput()">✏️ 学習時間を入力する</button>
+  <button class="nav-btn" style="background:#e67e22" onclick="goToAnalysis()">📊 みんなの分析を見る</button>
   <button class="nav-btn" style="background:#95a5a6" onclick="location.href='index.html'">🚪 ログアウト</button>
 </div>
 
@@ -80,7 +80,9 @@
   const myClass = params.get('class') || "1";
   document.getElementById('user-name-display').innerText = myName;
 
-  // グラフの準備
+  let cachedLogs = []; // リアルタイム更新用にデータを保持
+
+  // グラフの初期化
   const classCtx = document.getElementById('classChart').getContext('2d');
   let classChart = new Chart(classCtx, {
     type: 'bar',
@@ -95,21 +97,21 @@
   let personalChart = new Chart(personalCtx, {
     type: 'line',
     data: { labels: [], datasets: [
-      { label: 'がっこう', data: [], borderColor: '#2980b9', fill: false },
-      { label: 'じぶん', data: [], borderColor: '#c0392b', fill: false }
+      { label: 'がっこう', data: [], borderColor: '#2980b9', fill: false, tension: 0.3 },
+      { label: 'じぶん', data: [], borderColor: '#c0392b', fill: false, tension: 0.3 }
     ]},
     options: { responsive: true, maintainAspectRatio: false }
   });
 
-  // 🎯 Firestoreからデータをリアルタイム取得
+  // Firestore監視
   const q = query(collection(db, "learning_logs"), orderBy("timestamp", "asc"));
   onSnapshot(q, (snapshot) => {
-    let logs = [];
-    snapshot.forEach(doc => logs.push(doc.data()));
-    render(logs);
+    cachedLogs = [];
+    snapshot.forEach(doc => cachedLogs.push(doc.data()));
+    render();
   });
 
-  function render(logs) {
+  function render() {
     const filter = document.querySelector('input[name="viewType"]:checked').value;
     const denominators = {
       "1": Number(document.getElementById('ex-1').value) || 1,
@@ -117,52 +119,68 @@
       "3": Number(document.getElementById('ex-3').value) || 1
     };
 
-    // 集計ロジック
     let totals = { "1": { s:0, f:0 }, "2": { s:0, f:0 }, "3": { s:0, f:0 } };
     let myData = { labels: [], s: [], f: [] };
     let grandTotal = 0;
 
-    logs.forEach(log => {
+    cachedLogs.forEach(log => {
+      // クラス集計
       if (totals[log.class]) {
         totals[log.class].s += log.school;
         totals[log.class].f += log.self;
       }
+      // 個人データ
       if (log.name === myName) {
         myData.labels.push(log.date || "");
         myData.s.push(log.school);
         myData.f.push(log.self);
       }
+      // 全体合計（フィルタに応じて計算）
       if (filter === 'all') grandTotal += (log.school + log.self);
       else if (filter === 'school') grandTotal += log.school;
       else grandTotal += log.self;
     });
 
-    // 目標達成度更新
+    // 目標達成度
     const target = (filter === 'all') ? 30000 : (filter === 'school' ? 18000 : 12000);
     const percent = Math.min(100, Math.round((grandTotal / target) * 100));
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-bar').innerText = percent + '%';
+    const bar = document.getElementById('progress-bar');
+    bar.style.width = percent + '%';
+    bar.innerText = percent + '%';
     document.getElementById('goal-text').innerText = `目標まで あと ${Math.max(0, target - grandTotal)} 分！ (合計: ${grandTotal}分)`;
 
     // クラスグラフ更新
     classChart.data.datasets[0].data = [totals["1"].s/denominators["1"], totals["2"].s/denominators["2"], totals["3"].s/denominators["3"]];
     classChart.data.datasets[1].data = [totals["1"].f/denominators["1"], totals["2"].f/denominators["2"], totals["3"].f/denominators["3"]];
+    
+    // 表示切替
+    classChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
+    classChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
     classChart.update();
 
     // 個人グラフ更新
-    personalChart.data.labels = myData.labels.slice(-7); // 直近7件
+    personalChart.data.labels = myData.labels.slice(-7);
     personalChart.data.datasets[0].data = myData.s.slice(-7);
     personalChart.data.datasets[1].data = myData.f.slice(-7);
+    personalChart.setDatasetVisibility(0, filter === 'all' || filter === 'school');
+    personalChart.setDatasetVisibility(1, filter === 'all' || filter === 'self');
     personalChart.update();
   }
 
-  // フィルタ切り替え時に再描画
+  // イベント設定：リロードせずに再描画
   document.querySelectorAll('input[name="viewType"]').forEach(el => {
-    el.addEventListener('change', () => location.reload()); // 簡単のためリロード
+    el.addEventListener('change', render);
+  });
+  document.querySelectorAll('.teacher-section input').forEach(el => {
+    el.addEventListener('input', render);
   });
 
   window.goToInput = () => {
     location.href = `input.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+  };
+
+  window.goToAnalysis = () => {
+    location.href = `analysis.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
   };
 </script>
 </body>
