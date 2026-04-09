@@ -98,7 +98,7 @@
   async function loadStudents() {
     const list = document.getElementById('list-items');
     try {
-      const q = query(collection(db, "students"), orderBy("class"), orderBy("no"));
+      const q = query(collection(db, "students"));
       const snap = await getDocs(q);
       list.innerHTML = "";
       snap.forEach(d => {
