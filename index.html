@@ -3,245 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学習きろくアプリ（プロトタイプ）</title>
+<title>ログイン - がんばりダッシュボード</title>
 <style>
-  /* ＝ タブレット向けの全体デザイン ＝ */
   body {
-    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background-color: #f0f8ff; /* 優しい水色 */
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f8ff; /* 他の画面と同じ背景色 */
     color: #333;
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    align-items: center; /* 画面の中央に配置 */
+    height: 100vh; /* 画面いっぱいの高さ */
     margin: 0;
   }
-  .app-container {
+  .login-container {
     background: #fff;
     width: 90%;
-    max-width: 500px;
+    max-width: 400px;
     border-radius: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    padding: 30px;
+    padding: 40px 30px;
     text-align: center;
   }
-  h1 {
-    font-size: 24px;
-    color: #2c3e50;
-    margin-bottom: 30px;
+  h1 { font-size: 24px; color: #2c3e50; margin-bottom: 5px; }
+  p.subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 30px; }
+
+  .input-group {
+    margin-bottom: 20px;
+    text-align: left;
   }
-  /* ＝ 画面の切り替え用 ＝ */
-  .step {
-    display: none; /* 最初はすべて非表示 */
+  .input-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: #34495e;
+    margin-bottom: 8px;
   }
-  .step.active {
-    display: block; /* activeクラスがついたものだけ表示 */
-  }
-  /* ＝ フォーム・ボタンのデザイン（子供が押しやすいように大きく） ＝ */
-  select, input {
+  /* 入力フォームのデザイン */
+  .input-group select {
     width: 100%;
-    padding: 15px;
-    font-size: 20px;
-    border: 2px solid #bdc3c7;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
     border-radius: 10px;
+    font-size: 16px;
     box-sizing: border-box;
-    margin-bottom: 20px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    background-color: #fafafa;
   }
-  .time-input-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 20px;
+  .input-group select:focus {
+    border-color: #3498db;
+    outline: none;
+    background-color: #fff;
   }
-  .time-input-container input {
-    width: 45%;
-    margin-bottom: 0;
-  }
-  .time-input-container span {
-    font-size: 20px;
-    align-self: center;
-  }
-  button {
+
+  /* ログインボタン */
+  button.login-btn {
     width: 100%;
     padding: 15px;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     color: #fff;
-    background-color: #3498db;
+    background-color: #f39c12; /* ダッシュボードの目標色と統一 */
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: background-color 0.2s;
-  }
-  button:active {
-    background-color: #2980b9;
-    transform: translateY(2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .back-btn {
-    background-color: #95a5a6;
+    transition: 0.2s;
     margin-top: 15px;
+    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3);
   }
-  .back-btn:active {
-    background-color: #7f8c8d;
+  button.login-btn:hover { background-color: #e67e22; }
+
+  /* 先生用リンク */
+  .teacher-login {
+    margin-top: 25px;
+    font-size: 13px;
+    color: #95a5a6;
   }
+  .teacher-login a {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .teacher-login a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 
-<div class="app-container">
-  <h1>✏️ クラス学習きろく</h1>
+<div class="login-container">
+  <h1>🌟 学習アプリ</h1>
+  <p class="subtitle">じぶんのクラスとなまえをえらんでね</p>
 
-  <div id="step-name" class="step active">
-    <p>自分の名前をえらんでね</p>
-    <select id="user-select">
-      <option value="">-- なまえをえらぶ --</option>
-      <option value="1">1番: 青木 太郎</option>
-      <option value="2">2番: 伊藤 花子</option>
-      <option value="3">3番: 宇田川 健太</option>
+  <div class="input-group">
+    <label>🏫 クラス</label>
+    <select id="class-select">
+      <option value="1">1組</option>
+      <option value="2">2組</option>
+      <option value="3">3組</option>
     </select>
-    <button onclick="goToPassword()">つぎへ</button>
   </div>
 
-  <div id="step-password" class="step">
-    <p id="password-message">パスワード（4ケタのすうじ）</p>
-    <input type="password" id="password-input" placeholder="****" maxlength="4" inputmode="numeric">
-    <button onclick="checkPassword()">OK</button>
-    <button class="back-btn" onclick="showStep('step-name')">もどる</button>
+  <div class="input-group">
+    <label>👤 なまえ</label>
+    <select id="name-select">
+      <option value="aoki">青木 太郎</option>
+      <option value="sato">佐藤 花子</option>
+      <option value="suzuki">鈴木 一郎</option>
+      <option value="guest">ゲスト（おためし）</option>
+    </select>
   </div>
 
-  <div id="step-input" class="step">
-    <p>今週のがんばりを記録しよう！</p>
-    
-    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-      <p style="font-size: 14px; color: #666; text-align: left; margin: 0 0 10px 0;">📅 いつから？</p>
-      <input type="date" id="date-input" style="margin-bottom: 0;">
-    </div>
-    
-    <div style="background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-      <p style="font-size: 16px; font-weight: bold; color: #2980b9; text-align: left; margin: 0 0 10px 0;">① がっこうの勉強（宿題・ふくしゅう）</p>
-      <div class="time-input-container" style="margin-bottom: 0;">
-        <input type="number" id="school-hour-input" min="0" placeholder="0"> <span>時間</span>
-        <input type="number" id="school-minute-input" min="0" max="59" placeholder="0"> <span>分</span>
-      </div>
-    </div>
+  <button class="login-btn" onclick="login()">はじめる！</button>
 
-    <div style="background-color: #fff0f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-      <p style="font-size: 16px; font-weight: bold; color: #c0392b; text-align: left; margin: 0 0 10px 0;">② じぶんの学習（読書・プログラミング等）</p>
-      <div class="time-input-container" style="margin-bottom: 0;">
-        <input type="number" id="self-hour-input" min="0" placeholder="0"> <span>時間</span>
-        <input type="number" id="self-minute-input" min="0" max="59" placeholder="0"> <span>分</span>
-      </div>
-    </div>
-
-    <button onclick="submitData()" style="background-color: #2ecc71;">記録する！</button>
-    <button class="back-btn" onclick="showStep('step-name')">はじめから</button>
+  <div class="teacher-login">
+    👨‍🏫 先生ですか？ <a href="#" onclick="teacherLogin()">先生用ログイン</a>
   </div>
-
-  <div id="step-complete" class="step">
-    <h2>🎉 記録完了！</h2>
-    <p>よくがんばりました！<br>みんなのグラフを見てみよう。</p>
-    <button onclick="showStep('step-name')">最初の画面にもどる</button>
-  </div>
-
 </div>
 
 <script>
-  // ※本来はデータベースで管理しますが、今回はテスト用にブラウザのメモリに保存します。
-  const mockDatabase = {}; 
-  let selectedUser = "";
-
-  // 画面を切り替える関数
-  function showStep(stepId) {
-    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-    document.getElementById(stepId).classList.add('active');
-    
-    // 入力欄をリセット
-    if(stepId === 'step-name') {
-      document.getElementById('password-input').value = "";
-      document.getElementById('school-hour-input').value = "";
-      document.getElementById('school-minute-input').value = "";
-      document.getElementById('self-hour-input').value = "";
-      document.getElementById('self-minute-input').value = "";
-    }
+  function login() {
+    // 選択された名前などを取得して、ローカルストレージに保存するなどの処理も可能ですが、
+    // 今回はシンプルにダッシュボード画面へページ移動させます。
+    location.href = 'dashboard.html';
   }
 
-  // 「つぎへ」ボタン（名前選択後）
-  function goToPassword() {
-    selectedUser = document.getElementById('user-select').value;
-    if (selectedUser === "") {
-      alert("なまえをえらんでね！");
-      return;
-    }
-    const msg = document.getElementById('password-message');
-    // すでにパスワードが登録されているかチェック
-    if (mockDatabase[selectedUser]) {
-      msg.innerHTML = "パスワードを入れてね<br>（4ケタのすうじ）";
-    } else {
-      msg.innerHTML = "<b>【はじめてのログイン】</b><br>自分だけのパスワード（4ケタ）を決めて入力してね。";
-    }
-    showStep('step-password');
-  }
-
-  // 「OK」ボタン（パスワード確認）
-  function checkPassword() {
-    const passInput = document.getElementById('password-input').value;
-    if (passInput.length !== 4) {
-      alert("パスワードは4ケタのすうじにしてね！");
-      return;
-    }
-    if (mockDatabase[selectedUser]) {
-      // 登録済みの場合：答え合わせ
-      if (mockDatabase[selectedUser] === passInput) {
-        showStep('step-input'); 
-      } else {
-        alert("パスワードがちがいます。");
-      }
-    } else {
-      // 未登録の場合：新規登録
-      mockDatabase[selectedUser] = passInput;
-      alert("パスワードを登録しました！わすれないようにね。");
-      showStep('step-input');
-    }
-  }
-
-  // 「記録する！」ボタン
-  function submitData() {
-    const date = document.getElementById('date-input').value;
-    
-    // 学業に関わる時間
-    const schoolHour = document.getElementById('school-hour-input').value || 0;
-    const schoolMinute = document.getElementById('school-minute-input').value || 0;
-    const schoolTotalMinutes = parseInt(schoolHour) * 60 + parseInt(schoolMinute);
-
-    // それ以外の自主学習
-    const selfHour = document.getElementById('self-hour-input').value || 0;
-    const selfMinute = document.getElementById('self-minute-input').value || 0;
-    const selfTotalMinutes = parseInt(selfHour) * 60 + parseInt(selfMinute);
-
-    if (!date) {
-      alert("日付をえらんでね！");
-      return;
-    }
-    // どちらも0分だった場合のエラーチェック
-    if (schoolTotalMinutes === 0 && selfTotalMinutes === 0) {
-      alert("どちらかの時間を入力してね！");
-      return;
-    }
-
-    // --- ここで本来はGoogleスプレッドシート（GAS）等にデータを送ります ---
-    console.log("送信データ:", {
-      user: selectedUser,
-      date: date,
-      schoolStudyTime: schoolTotalMinutes,
-      selfStudyTime: selfTotalMinutes
-    });
-    // --------------------------------------------------------
-
-    showStep('step-complete');
+  function teacherLogin() {
+    alert('先生モードでログインします。');
+    location.href = 'dashboard.html';
   }
 </script>
-
 </body>
 </html>
