@@ -3,25 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>がんばり入力 - 学習アプリ</title>
+    <title>学習入力 - 学習アプリ</title>
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #fffbe6; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .input-container { background: #fff; width: 95%; max-width: 450px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; text-align: center; box-sizing: border-box;}
-        h1 { font-size: 20px; color: #d35400; margin-bottom: 20px; }
-        .user-info { background: #fef9e7; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; color: #7f8c8d; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #fffbe6; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
+        .input-container { background: #fff; width: 95%; max-width: 500px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+        h1 { font-size: 20px; color: #d35400; margin-bottom: 15px; }
+        .user-info { background: #fef9e7; padding: 8px; border-radius: 10px; margin-bottom: 15px; font-weight: bold; font-size: 14px; }
         
-        .input-section { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
-        .input-section h3 { font-size: 16px; margin: 0 0 10px 0; color: #2c3e50; text-align: left; }
-        
-        .time-inputs { display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .time-field { display: flex; align-items: center; gap: 5px; }
-        input[type="number"] { width: 80px; padding: 12px; border: 2px solid #f39c12; border-radius: 10px; font-size: 20px; text-align: center; }
-        .label-unit { font-weight: bold; color: #7f8c8d; font-size: 16px; }
+        /* タブ切り替え */
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: none; transition: 0.3s; }
+        .tab-btn.active { background: #fff; color: #d35400; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-submit:active { transform: scale(0.98); background-color: #d35400; }
-        .btn-submit:disabled { background-color: #bdc3c7; }
-        .btn-back { background: none; border: none; color: #7f8c8d; text-decoration: underline; margin-top: 20px; cursor: pointer; font-size: 14px; }
+        .date-row { margin-bottom: 15px; text-align: left; background: #fdfaf0; padding: 10px; border-radius: 10px; border: 1px solid #f9ebea; }
+        .date-row label { font-weight: bold; font-size: 14px; margin-right: 10px; }
+        input[type="date"] { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+
+        .input-card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; }
+        .day-label { font-weight: bold; color: #e67e22; border-left: 4px solid #e67e22; padding-left: 8px; margin-bottom: 10px; }
+        
+        .time-row { display: flex; align-items: center; gap: 15px; margin-bottom: 8px; }
+        .time-row span { font-size: 13px; width: 60px; font-weight: bold; }
+        .inputs { display: flex; align-items: center; gap: 5px; }
+        input[type="number"] { width: 55px; padding: 8px; border: 1px solid #f39c12; border-radius: 6px; text-align: center; font-size: 16px; }
+        .unit { font-size: 12px; color: #666; }
+
+        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
+        .btn-submit:disabled { background: #ccc; }
+        .btn-back { background: none; border: none; color: #7f8c8d; text-decoration: underline; margin-top: 15px; cursor: pointer; font-size: 13px; }
+        
+        #week-inputs { display: none; } /* 初期は1週間用は非表示 */
     </style>
 </head>
 <body>
@@ -30,41 +41,51 @@
     <h1>✏️ がんばった時間をいれる</h1>
     <div id="user-display" class="user-info">読み込み中...</div>
 
-    <div class="input-section">
-        <h3>🏫 がっこうの勉強</h3>
-        <div class="time-inputs">
-            <div class="time-field">
-                <input type="number" id="s-hour" placeholder="0" min="0" inputmode="numeric">
-                <span class="label-unit">時間</span>
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchMode('day')">1日分</button>
+        <button class="tab-btn" onclick="switchMode('week')">1週間分</button>
+    </div>
+
+    <div id="day-inputs">
+        <div class="date-row">
+            <label>📅 日付:</label>
+            <input type="date" id="single-date">
+        </div>
+        <div class="input-card">
+            <div class="time-row">
+                <span>🏫 学校</span>
+                <div class="inputs">
+                    <input type="number" id="s-h" placeholder="0" min="0">時間
+                    <input type="number" id="s-m" placeholder="0" min="0">分
+                </div>
             </div>
-            <div class="time-field">
-                <input type="number" id="s-min" placeholder="0" min="0" inputmode="numeric">
-                <span class="label-unit">分</span>
+            <div class="time-row">
+                <span>🏠 自分</span>
+                <div class="inputs">
+                    <input type="number" id="f-h" placeholder="0" min="0">時間
+                    <input type="number" id="f-m" placeholder="0" min="0">分
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="input-section">
-        <h3>🏠 じぶんの学習</h3>
-        <div class="time-inputs">
-            <div class="time-field">
-                <input type="number" id="f-hour" placeholder="0" min="0" inputmode="numeric">
-                <span class="label-unit">時間</span>
-            </div>
-            <div class="time-field">
-                <input type="number" id="f-min" placeholder="0" min="0" inputmode="numeric">
-                <span class="label-unit">分</span>
-            </div>
+    <div id="week-inputs">
+        <div class="date-row">
+            <label>📅 開始日:</label>
+            <input type="date" id="week-start-date" onchange="updateWeekLabels()">
+            <div style="font-size:11px; color:#666; margin-top:5px;">※選んだ日から7日分を入力できます</div>
         </div>
+        <div id="week-list">
+            </div>
     </div>
 
     <button id="submit-btn" class="btn-submit">送信する！</button>
-    <button class="btn-back" id="back-btn">もどる</button>
+    <button class="btn-back" onclick="history.back()">もどる</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, writeBatch, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -81,56 +102,99 @@
     const params = new URLSearchParams(window.location.search);
     const myName = params.get('name');
     const myClass = params.get('class');
-
-    if (!myName || !myClass) {
-        alert("名前とクラスがわかりません。ログインしなおしてください。");
-        location.href = "index.html";
-    }
     document.getElementById('user-display').innerText = `${myClass}組：${myName} さん`;
 
-    document.getElementById('submit-btn').onclick = async () => {
-        // 学校の計算
-        const sH = parseInt(document.getElementById('s-hour').value) || 0;
-        const sM = parseInt(document.getElementById('s-min').value) || 0;
-        const totalSchool = (sH * 60) + sM;
+    // 初期日付セット（今日）
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('single-date').value = today;
+    document.getElementById('week-start-date').value = today;
 
-        // 自分の計算
-        const fH = parseInt(document.getElementById('f-hour').value) || 0;
-        const fM = parseInt(document.getElementById('f-min').value) || 0;
-        const totalSelf = (fH * 60) + fM;
-
-        if (totalSchool === 0 && totalSelf === 0) {
-            alert("時間を入力してね！");
-            return;
-        }
-
-        const btn = document.getElementById('submit-btn');
-        btn.disabled = true;
-        btn.innerText = "送信中...";
-
-        try {
-            await addDoc(collection(db, "learning_logs"), {
-                name: myName,
-                class: myClass,
-                school: totalSchool,
-                self: totalSelf,
-                date: new Date().toLocaleDateString('ja-JP'),
-                timestamp: serverTimestamp()
-            });
-
-            alert("送信しました！");
-            location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
-
-        } catch (e) {
-            console.error(e);
-            alert("エラーが起きました。");
-            btn.disabled = false;
-            btn.innerText = "送信する！";
-        }
+    // モード切り替え
+    let mode = 'day';
+    window.switchMode = (m) => {
+        mode = m;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.includes(m === 'day' ? '1日' : '1週間')));
+        document.getElementById('day-inputs').style.display = m === 'day' ? 'block' : 'none';
+        document.getElementById('week-inputs').style.display = m === 'week' ? 'block' : 'none';
     };
 
-    document.getElementById('back-btn').onclick = () => {
-        location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+    // 1週間分の入力枠生成
+    const weekList = document.getElementById('week-list');
+    for (let i = 0; i < 7; i++) {
+        weekList.innerHTML += `
+            <div class="input-card">
+                <div class="day-label" id="day-label-${i}">日付未定</div>
+                <div class="time-row">
+                    <span>🏫 学校</span>
+                    <div class="inputs">
+                        <input type="number" id="w-s-h-${i}" placeholder="0">時
+                        <input type="number" id="w-s-m-${i}" placeholder="0">分
+                    </div>
+                </div>
+                <div class="time-row">
+                    <span>🏠 自分</span>
+                    <div class="inputs">
+                        <input type="number" id="w-f-h-${i}" placeholder="0">時
+                        <input type="number" id="w-f-m-${i}" placeholder="0">分
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    window.updateWeekLabels = () => {
+        const start = new Date(document.getElementById('week-start-date').value);
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            document.getElementById(`day-label-${i}`).innerText = d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
+        }
+    };
+    updateWeekLabels();
+
+    // 送信処理
+    document.getElementById('submit-btn').onclick = async () => {
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        const batch = writeBatch(db);
+        let hasData = false;
+
+        if (mode === 'day') {
+            const sh = parseInt(document.getElementById('s-h').value) || 0;
+            const sm = parseInt(document.getElementById('s-m').value) || 0;
+            const fh = parseInt(document.getElementById('f-h').value) || 0;
+            const fm = parseInt(document.getElementById('f-m').value) || 0;
+            const date = document.getElementById('single-date').value;
+            if (sh+sm+fh+fm > 0) {
+                const ref = doc(collection(db, "learning_logs"));
+                batch.set(ref, { name: myName, class: myClass, school: sh * 60 + sm, self: fh * 60 + fm, date: date, timestamp: serverTimestamp() });
+                hasData = true;
+            }
+        } else {
+            const start = new Date(document.getElementById('week-start-date').value);
+            for (let i = 0; i < 7; i++) {
+                const sh = parseInt(document.getElementById(`w-s-h-${i}`).value) || 0;
+                const sm = parseInt(document.getElementById(`w-s-m-${i}`).value) || 0;
+                const fh = parseInt(document.getElementById(`w-f-h-${i}`).value) || 0;
+                const fm = parseInt(document.getElementById(`w-f-m-${i}`).value) || 0;
+                if (sh+sm+fh+fm > 0) {
+                    const d = new Date(start); d.setDate(start.getDate() + i);
+                    const ref = doc(collection(db, "learning_logs"));
+                    batch.set(ref, { name: myName, class: myClass, school: sh * 60 + sm, self: fh * 60 + fm, date: d.toISOString().split('T')[0], timestamp: serverTimestamp() });
+                    hasData = true;
+                }
+            }
+        }
+
+        if (!hasData) { alert("時間を入力してね！"); btn.disabled = false; return; }
+
+        try {
+            await batch.commit();
+            alert("送信しました！");
+            location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+        } catch (e) {
+            alert("エラー: " + e.message);
+            btn.disabled = false;
+        }
     };
 </script>
 </body>
