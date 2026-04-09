@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>児童登録 - 管理画面</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #f4f7f6; }
+  .admin-box { background: white; padding: 20px; border-radius: 10px; max-width: 500px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  input, select, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+  button { background: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
+  .student-list { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="admin-box">
+  <h2>👨‍🏫 児童の名簿登録</h2>
+  <input type="number" id="reg-class" placeholder="クラス (例: 1)">
+  <input type="number" id="reg-no" placeholder="出席番号 (例: 5)">
+  <input type="text" id="reg-name" placeholder="なまえ (例: 山田 太郎)">
+  <button id="add-btn">登録する</button>
+
+  <div class="student-list" id="student-list">
+    <h3>登録済みの児童一覧</h3>
+    <ul id="list-items"></ul>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+    authDomain: "study-app-4215b.firebaseapp.com",
+    projectId: "study-app-4215b",
+    storageBucket: "study-app-4215b.firebasestorage.app",
+    messagingSenderId: "896254140020",
+    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // 登録処理
+  document.getElementById('add-btn').addEventListener('click', async () => {
+    const cls = document.getElementById('reg-class').value;
+    const no = document.getElementById('reg-no').value;
+    const name = document.getElementById('reg-name').value;
+
+    if(!cls || !no || !name) return alert("全部入力してね！");
+
+    try {
+      await addDoc(collection(db, "students"), {
+        class: cls,
+        no: Number(no),
+        name: name
+      });
+      alert("登録しました！");
+      location.reload(); // 一覧更新のためリロード
+    } catch (e) { alert("エラー: " + e); }
+  });
+
+  // 一覧表示処理
+  const loadStudents = async () => {
+    const q = query(collection(db, "students"), orderBy("class"), orderBy("no"));
+    const querySnapshot = await getDocs(q);
+    const list = document.getElementById('list-items');
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      list.innerHTML += `<li>${data.class}組 ${data.no}番: ${data.name}</li>`;
+    });
+  };
+  loadStudents();
+</script>
+</body>
+</html>
