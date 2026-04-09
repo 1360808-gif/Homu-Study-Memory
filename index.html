@@ -3,133 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ログイン - がんばりダッシュボード</title>
+<title>ログイン - 学習アプリ</title>
 <style>
-  body {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    background-color: #f0f8ff; /* 他の画面と同じ背景色 */
-    color: #333;
-    display: flex;
-    justify-content: center;
-    align-items: center; /* 画面の中央に配置 */
-    height: 100vh; /* 画面いっぱいの高さ */
-    margin: 0;
-  }
-  .login-container {
-    background: #fff;
-    width: 90%;
-    max-width: 400px;
-    border-radius: 20px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    padding: 40px 30px;
-    text-align: center;
-  }
-  h1 { font-size: 24px; color: #2c3e50; margin-bottom: 5px; }
-  p.subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 30px; }
-
-  .input-group {
-    margin-bottom: 20px;
-    text-align: left;
-  }
-  .input-group label {
-    display: block;
-    font-size: 14px;
-    font-weight: bold;
-    color: #34495e;
-    margin-bottom: 8px;
-  }
-  /* 入力フォームのデザイン */
-  .input-group select {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #ecf0f1;
-    border-radius: 10px;
-    font-size: 16px;
-    box-sizing: border-box;
-    cursor: pointer;
-    transition: border-color 0.3s;
-    background-color: #fafafa;
-  }
-  .input-group select:focus {
-    border-color: #3498db;
-    outline: none;
-    background-color: #fff;
-  }
-
-  /* ログインボタン */
-  button.login-btn {
-    width: 100%;
-    padding: 15px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #fff;
-    background-color: #f39c12; /* ダッシュボードの目標色と統一 */
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: 0.2s;
-    margin-top: 15px;
-    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3);
-  }
-  button.login-btn:hover { background-color: #e67e22; }
-
-  /* 先生用リンク */
-  .teacher-login {
-    margin-top: 25px;
-    font-size: 13px;
-    color: #95a5a6;
-  }
-  .teacher-login a {
-    color: #3498db;
-    text-decoration: none;
-    font-weight: bold;
-  }
-  .teacher-login a:hover { text-decoration: underline; }
+  body { font-family: sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+  .login-container { background: #fff; width: 90%; max-width: 400px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 40px 30px; text-align: center; }
+  h1 { font-size: 24px; color: #2c3e50; margin-bottom: 10px; }
+  .loading-msg { color: #3498db; font-weight: bold; margin: 20px 0; }
+  .input-group { margin-bottom: 20px; text-align: left; display: none; } /* 名簿読み込みまで隠す */
+  .input-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+  .input-group select { width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 10px; font-size: 16px; background-color: #fafafa; }
+  button.login-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; display: none; }
 </style>
 </head>
 <body>
 
 <div class="login-container">
   <h1>🌟 学習アプリ</h1>
-  <p class="subtitle">じぶんのクラスとなまえをえらんでね</p>
+  <div id="loading" class="loading-msg">名簿をよみこんでいます...</div>
 
-  <div class="input-group">
+  <div class="input-group" id="group-class">
     <label>🏫 クラス</label>
     <select id="class-select">
-      <option value="1">1組</option>
-      <option value="2">2組</option>
-      <option value="3">3組</option>
-    </select>
+      <option value="">クラスをえらんでね</option>
+      </select>
   </div>
 
-  <div class="input-group">
+  <div class="input-group" id="group-name">
     <label>👤 なまえ</label>
     <select id="name-select">
-      <option value="aoki">青木 太郎</option>
-      <option value="sato">佐藤 花子</option>
-      <option value="suzuki">鈴木 一郎</option>
-      <option value="guest">ゲスト（おためし）</option>
+      <option value="">まずクラスをえらんでね</option>
     </select>
   </div>
 
-  <button class="login-btn" onclick="login()">はじめる！</button>
-
-  <div class="teacher-login">
-    👨‍🏫 先生ですか？ <a href="#" onclick="teacherLogin()">先生用ログイン</a>
-  </div>
+  <button id="login-btn" class="login-btn" onclick="login()">はじめる！</button>
 </div>
 
-<script>
-  function login() {
-    // 選択された名前などを取得して、ローカルストレージに保存するなどの処理も可能ですが、
-    // 今回はシンプルにダッシュボード画面へページ移動させます。
-    location.href = 'dashboard.html';
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+    authDomain: "study-app-4215b.firebaseapp.com",
+    projectId: "study-app-4215b",
+    storageBucket: "study-app-4215b.firebasestorage.app",
+    messagingSenderId: "896254140020",
+    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let allStudents = [];
+
+  // Firestoreから児童名簿を取得
+  async function fetchStudents() {
+    try {
+      const q = query(collection(db, "students"), orderBy("class"), orderBy("no"));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        allStudents.push(doc.data());
+      });
+
+      setupClassSelect();
+      
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('group-class').style.display = 'block';
+      document.getElementById('group-name').style.display = 'block';
+      document.getElementById('login-btn').style.display = 'block';
+    } catch (e) {
+      document.getElementById('loading').innerText = "エラー: めいぼがとれませんでした。";
+      console.error(e);
+    }
   }
 
-  function teacherLogin() {
-    alert('先生モードでログインします。');
-    location.href = 'dashboard.html';
+  // クラスの選択肢を作る
+  function setupClassSelect() {
+    const classSelect = document.getElementById('class-select');
+    const classes = [...new Set(allStudents.map(s => s.class))]; // 重複削除
+    classes.forEach(cls => {
+      const opt = document.createElement('option');
+      opt.value = cls;
+      opt.textContent = cls + "組";
+      classSelect.appendChild(opt);
+    });
   }
+
+  // クラスが選ばれたら、そのクラスの子供だけを表示する
+  document.getElementById('class-select').addEventListener('change', (e) => {
+    const selectedClass = e.target.value;
+    const nameSelect = document.getElementById('name-select');
+    nameSelect.innerHTML = '<option value="">なまえをえらんでね</option>';
+
+    const filtered = allStudents.filter(s => s.class == selectedClass);
+    filtered.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = s.name;
+      nameSelect.appendChild(opt);
+    });
+  });
+
+  // ログイン処理をグローバルに公開
+  window.login = function() {
+    const classVal = document.getElementById('class-select').value;
+    const nameVal = document.getElementById('name-select').value;
+    if (!classVal || !nameVal) {
+      alert("クラスとなまえをえらんでね！");
+      return;
+    }
+    location.href = `dashboard.html?class=${classVal}&name=${encodeURIComponent(nameVal)}`;
+  };
+
+  fetchStudents();
 </script>
 </body>
 </html>
