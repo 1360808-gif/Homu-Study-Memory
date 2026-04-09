@@ -6,72 +6,40 @@
 <title>分析・ランキング</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  body {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    background-color: #f0f8ff;
-    color: #333;
-    display: flex;
-    justify-content: center;
-    padding: 20px 0;
-    margin: 0;
-  }
-  .app-container {
-    background: #fff;
-    width: 95%;
-    max-width: 900px;
-    border-radius: 20px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    padding: 20px;
-    text-align: center;
-  }
+  /* 元のデザインを継承 */
+  body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
+  .app-container { background: #fff; width: 95%; max-width: 900px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
-  
-  .global-filter {
-    display: flex;
-    justify-content: space-around;
-    background-color: #ffeaa7;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    border: 2px solid #fdcb6e;
-  }
-  .global-filter label { font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-
-  .controls { background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 10px; justify-content: center; align-items: center; }
-  .controls select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #bdc3c7; cursor: pointer; }
-  
+  .global-filter { display: flex; justify-content: space-around; background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #fdcb6e; }
+  .controls { background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .controls select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #bdc3c7; }
   .note { font-size: 13px; color: #2c3e50; margin-bottom: 15px; text-align: left; font-weight: bold; background: #e8f8f5; padding: 10px; border-radius: 5px; border-left: 5px solid #1abc9c; }
   .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px;}
   .chart-container { position: relative; height: 450px; min-width: 800px; padding: 10px;}
-
-  /* ナビゲーションボタン */
-  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #27ae60; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s;}
-  button.nav-btn:hover { background-color: #2ecc71; }
+  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #27ae60; border: none; border-radius: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>📊 じぶんとみんなの「がんばり分析」</h1>
+  <h1>📊 みんなの「がんばり分析」</h1>
 
   <div class="global-filter">
-    <label><input type="radio" name="viewType" value="all" checked onchange="updateChart()"> ぜんぶ</label>
-    <label><input type="radio" name="viewType" value="school" onchange="updateChart()"> がっこう</label>
-    <label><input type="radio" name="viewType" value="self" onchange="updateChart()"> じぶん</label>
+    <label><input type="radio" name="viewType" value="all" checked> ぜんぶ</label>
+    <label><input type="radio" name="viewType" value="school"> がっこう</label>
+    <label><input type="radio" name="viewType" value="self"> じぶん</label>
   </div>
 
   <div class="controls">
-    <label style="font-weight: bold; color: #2980b9;">どんな順番でくらべる？</label>
-    <select id="sort-mode" onchange="updateChart()">
-      <option value="total-desc">🏆 全体：長い順（歴代トップ層）</option>
+    <label style="font-weight: bold; color: #2980b9;">表示順:</label>
+    <select id="sort-mode">
+      <option value="total-desc">🏆 全体：長い順</option>
       <option value="total-asc">🌱 全体：短い順</option>
-      <option value="month-desc">📅 今月：長い順</option>
-      <option value="week-desc">🔥 今週：長い順</option>
-      <option value="close-to-me" selected>🤝 自分と近い人（前後3人）</option>
+      <option value="close-to-me" selected>🤝 自分と近い人</option>
     </select>
   </div>
 
-  <p class="note">🏆 トップ20名にランクインすると名前が表示されます！ 下の濃い色が「がっこう」、上の明るい色が「じぶん」の学習です。</p>
+  <p class="note">🏆 トップ20名は名前が表示されます！それ以外の人は匿名（イニシャル）で表示されます。</p>
 
   <div class="chart-wrapper">
     <div class="chart-container" id="chart-box">
@@ -79,110 +47,132 @@
     </div>
   </div>
 
-  <button class="nav-btn" onclick="location.href='dashboard.html'">🏠 ダッシュボードにもどる</button>
+  <button class="nav-btn" id="back-dashboard">🏠 ダッシュボードにもどる</button>
 </div>
 
-<script>
-  const allData = [];
-  const names = ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤", "吉田", "山田", "佐々木", "山口", "松本"];
-  
-  allData.push({
-    id: "user_me", realName: "青木 太郎 (自分)", initial: "青木 太郎 (自分)",
-    times: { total: { school: 9500, self: 6000 }, month: { school: 2400, self: 1800 }, week: { school: 600, self: 400 } }
-  });
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  for(let i = 1; i <= 40; i++) {
-    const lastName = names[i % names.length];
-    const baseTotalS = 3000 + Math.floor(Math.random() * 8000);
-    const baseTotalM = 2000 + Math.floor(Math.random() * 6000);
-    allData.push({
-      id: "u" + i, realName: `${lastName} ${i}号`, initial: `${lastName.charAt(0)}. 匿名`,
-      times: {
-        total: { school: baseTotalS, self: baseTotalM },
-        month: { school: Math.floor(baseTotalS * 0.25), self: Math.floor(baseTotalM * 0.25) },
-        week:  { school: Math.floor(baseTotalS * 0.06), self: Math.floor(baseTotalM * 0.06) }
-      }
-    });
-  }
+  const firebaseConfig = {
+    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+    authDomain: "study-app-4215b.firebaseapp.com",
+    projectId: "study-app-4215b",
+    storageBucket: "study-app-4215b.firebasestorage.app",
+    messagingSenderId: "896254140020",
+    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+  };
 
-  // 時間フォーマット変換
-  function formatTime(minutes) {
-    if (minutes === 0) return "0分";
-    if (minutes < 60) return minutes + "分";
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m > 0 ? `${h}時間${m}分` : `${h}時間`;
-  }
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const params = new URLSearchParams(window.location.search);
+  const myName = params.get('name') || "ゲスト";
+  const myClass = params.get('class') || "1";
+
+  let allLogs = [];
+  let studentData = {};
 
   const ctx = document.getElementById('analysisChart').getContext('2d');
   let analysisChart = new Chart(ctx, {
     type: 'bar',
-    data: { labels: [], datasets: [ { label: 'がっこう', data: [], backgroundColor: [], borderRadius: 0 }, { label: 'じぶん', data: [], backgroundColor: [], borderRadius: 4 } ] },
+    data: { labels: [], datasets: [ { label: 'がっこう', data: [], backgroundColor: [] }, { label: 'じぶん', data: [], backgroundColor: [] } ] },
     options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return `${context.dataset.label}: ${formatTime(context.parsed.y)}`; } } } },
-      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: '時間' }, ticks: { callback: function(value) { return formatTime(value); } } } }
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
     }
   });
+
+  // データ取得と集計
+  async function loadData() {
+    const q = query(collection(db, "learning_logs"));
+    const querySnapshot = await getDocs(q);
+    
+    let summary = {}; // 名前ごとに集計
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      if (!summary[data.name]) {
+        summary[data.name] = { name: data.name, school: 0, self: 0 };
+      }
+      summary[data.name].school += data.school;
+      summary[data.name].self += data.self;
+    });
+
+    studentData = Object.values(summary);
+    updateChart();
+  }
 
   function updateChart() {
     const viewType = document.querySelector('input[name="viewType"]:checked').value;
     const sortMode = document.getElementById('sort-mode').value;
 
-    const getVal = (user, period) => {
-      const t = user.times[period];
-      if (viewType === 'school') return t.school;
-      if (viewType === 'self') return t.self;
-      return t.school + t.self;
-    };
+    const getScore = (s) => (viewType === 'all' ? (s.school + s.self) : (viewType === 'school' ? s.school : s.self));
 
-    let period = 'total';
-    if(sortMode.includes('week')) period = 'week';
-    if(sortMode.includes('month')) period = 'month';
+    // スコア順にソートして順位付与
+    let ranked = [...studentData].sort((a, b) => getScore(b) - getScore(a));
+    ranked.forEach((s, i) => s.rank = i + 1);
 
-    let rankedData = [...allData].sort((a, b) => getVal(b, period) - getVal(a, period));
-    rankedData.forEach((user, index) => { user.currentRank = index + 1; });
+    const me = ranked.find(s => s.name === myName) || { name: myName, school: 0, self: 0, rank: 999 };
+    let displayList = [];
 
-    const me = rankedData.find(u => u.id === 'user_me');
-    let displayOthers = [];
-
-    if (sortMode.includes('desc')) {
-      displayOthers = rankedData.filter(u => u.id !== 'user_me');
-    } else if (sortMode.includes('asc')) {
-      displayOthers = rankedData.filter(u => u.id !== 'user_me').reverse();
-    } else if (sortMode === 'close-to-me') {
-      const myIndex = rankedData.findIndex(u => u.id === 'user_me');
-      const start = Math.max(0, myIndex - 3); // 前後3人に修正
-      const end = Math.min(rankedData.length, myIndex + 4);
-      displayOthers = rankedData.slice(start, end).filter(u => u.id !== 'user_me');
+    if (sortMode === 'total-desc') {
+      displayList = ranked;
+    } else if (sortMode === 'total-asc') {
+      displayList = [...ranked].reverse();
+    } else { // close-to-me
+      const myIdx = ranked.findIndex(s => s.name === myName);
+      if (myIdx === -1) {
+        displayList = [me];
+      } else {
+        const start = Math.max(0, myIdx - 3);
+        const end = Math.min(ranked.length, myIdx + 4);
+        displayList = ranked.slice(start, end);
+      }
     }
 
-    const finalArray = [me, ...displayOthers];
-    document.getElementById('chart-box').style.width = Math.max(800, finalArray.length * 45) + 'px';
+    // グラフ反映
+    const labels = [];
+    const sData = [];
+    const fData = [];
+    const sCols = [];
+    const fCols = [];
 
-    const labels = []; const schoolData = []; const selfData = []; const schoolColors = []; const selfColors = [];
+    displayList.forEach(s => {
+      // ラベル（20位以内 or 自分 or 前後3人は名前出し）
+      const isMe = s.name === myName;
+      const isClose = Math.abs(s.rank - me.rank) <= 3;
+      const isTop = s.rank <= 20;
 
-    finalArray.forEach(u => {
-      if (u.id === 'user_me') { labels.push(`⭐️ ${u.realName}`); schoolColors.push('#c0392b'); selfColors.push('#e74c3c'); }
-      else if (u.currentRank <= 20) { labels.push(`${u.currentRank}位: ${u.realName}`); schoolColors.push('#2980b9'); selfColors.push('#3498db'); }
-      else if (Math.abs(u.currentRank - me.currentRank) <= 3) { labels.push(`${u.currentRank}位: ${u.realName}`); schoolColors.push('#27ae60'); selfColors.push('#2ecc71'); } // 前後3人は緑系で名前表示
-      else { labels.push(`${u.currentRank}位: ${u.initial}`); schoolColors.push('#7f8c8d'); selfColors.push('#95a5a6'); }
-      
-      schoolData.push(u.times[period].school);
-      selfData.push(u.times[period].self);
+      if (isMe) {
+        labels.push(`⭐️ ${s.name}`);
+        sCols.push('#c0392b'); fCols.push('#e74c3c');
+      } else if (isTop || isClose) {
+        labels.push(`${s.rank}位: ${s.name}`);
+        sCols.push('#2980b9'); fCols.push('#3498db');
+      } else {
+        labels.push(`${s.rank}位: ${s.name.charAt(0)}...`);
+        sCols.push('#7f8c8d'); fCols.push('#95a5a6');
+      }
+      sData.push(s.school);
+      fData.push(s.self);
     });
 
     analysisChart.data.labels = labels;
-    analysisChart.data.datasets[0].data = schoolData;
-    analysisChart.data.datasets[0].backgroundColor = schoolColors;
-    analysisChart.data.datasets[1].data = selfData;
-    analysisChart.data.datasets[1].backgroundColor = selfColors;
-    
-    analysisChart.setDatasetVisibility(0, viewType === 'all' || viewType === 'school');
-    analysisChart.setDatasetVisibility(1, viewType === 'all' || viewType === 'self');
+    analysisChart.data.datasets[0].data = sData;
+    analysisChart.data.datasets[0].backgroundColor = sCols;
+    analysisChart.data.datasets[1].data = fData;
+    analysisChart.data.datasets[1].backgroundColor = fCols;
     analysisChart.update();
   }
 
-  updateChart();
+  // イベント登録
+  document.querySelectorAll('input[name="viewType"]').forEach(r => r.addEventListener('change', updateChart));
+  document.getElementById('sort-mode').addEventListener('change', updateChart);
+  document.getElementById('back-dashboard').onclick = () => {
+    location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+  };
+
+  loadData();
 </script>
 </body>
 </html>
