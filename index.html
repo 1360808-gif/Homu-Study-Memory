@@ -2,37 +2,22 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ログイン - 学習アプリ</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-container { background: #fff; width: 90%; max-width: 400px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 40px 30px; text-align: center; }
-        h1 { font-size: 24px; color: #2c3e50; }
-        #status { color: #3498db; font-weight: bold; margin: 20px 0; }
-        .input-group { margin-bottom: 20px; text-align: left; display: none; }
-        .input-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
-        select { width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 10px; font-size: 16px; }
-        .login-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; display: none; }
+        body { font-family: sans-serif; background: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 30px; border-radius: 20px; width: 300px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 10px; border: 1px solid #ccc; font-size: 16px; }
+        button { background: #f39c12; color: white; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div class="login-container">
-    <h1>🌟 学習アプリ</h1>
-    <div id="status">めいぼを よみこんでいます...</div>
-
-    <div class="input-group" id="group-class">
-        <label>🏫 クラス</label>
-        <select id="class-select"><option value="">えらんでね</option></select>
+    <div class="login-box">
+        <h1>🌟 ログイン</h1>
+        <div id="status">名簿を確認中...</div>
+        <select id="class-select" style="display:none;"><option value="">クラスを選択</option></select>
+        <select id="name-select" style="display:none;"><option value="">名前を選択</option></select>
+        <button id="login-btn" style="display:none;">はじめる！</button>
     </div>
-
-    <div class="input-group" id="group-name">
-        <label>👤 なまえ</label>
-        <select id="name-select"><option value="">まずクラスをえらんでね</option></select>
-    </div>
-
-    <button id="login-btn" class="login-btn" onclick="login()">はじめる！</button>
-</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
@@ -51,65 +36,48 @@
     const db = getFirestore(app);
     let allStudents = [];
 
-    async function fetchStudents() {
+    async function init() {
         try {
-            // orderByを使わずに取得（インデックスエラーを回避）
-            const q = query(collection(db, "students"));
-            const querySnapshot = await getDocs(q);
-            
-            querySnapshot.forEach((doc) => {
-                allStudents.push(doc.data());
-            });
+            const q = query(collection(db, "students")); 
+            const snap = await getDocs(q);
+            snap.forEach(doc => allStudents.push(doc.data()));
 
-            if (allStudents.length === 0) {
-                document.getElementById('status').innerText = "名簿が空です。管理画面で登録してください。";
-                return;
-            }
-
-            // クラスの選択肢を作成（重複削除して並べ替え）
-            const classes = [...new Set(allStudents.map(s => s.class))].sort((a, b) => a - b);
-            const classSelect = document.getElementById('class-select');
-            classes.forEach(cls => {
+            const classes = [...new Set(allStudents.map(s => String(s.class)))].sort();
+            const cSelect = document.getElementById('class-select');
+            classes.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = cls; opt.textContent = cls + "組";
-                classSelect.appendChild(opt);
+                opt.value = c; opt.textContent = c + "組";
+                cSelect.appendChild(opt);
             });
 
-            // 画面を表示
             document.getElementById('status').style.display = 'none';
-            document.getElementById('group-class').style.display = 'block';
-            document.getElementById('group-name').style.display = 'block';
+            cSelect.style.display = 'block';
+            document.getElementById('name-select').style.display = 'block';
             document.getElementById('login-btn').style.display = 'block';
-
         } catch (e) {
-            console.error(e);
-            document.getElementById('status').innerText = "エラー: " + e.message;
+            document.getElementById('status').innerText = "通信エラー";
         }
     }
 
-    // クラス選択時の処理
     document.getElementById('class-select').onchange = (e) => {
-        const selectedClass = e.target.value;
-        const nameSelect = document.getElementById('name-select');
-        nameSelect.innerHTML = '<option value="">なまえをえらんでね</option>';
-
-        // 選んだクラスの生徒を抽出し、出席番号順に並べ替え
-        const filtered = allStudents.filter(s => s.class == selectedClass)
-                                    .sort((a, b) => a.no - b.no);
-        filtered.forEach(s => {
+        const nSelect = document.getElementById('name-select');
+        nSelect.innerHTML = '<option value="">名前を選択</option>';
+        const filtered = allStudents.filter(s => String(s.class) === e.target.value);
+        filtered.sort((a,b) => a.no - b.no).forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.name; opt.textContent = s.name;
-            nameSelect.appendChild(opt);
+            nSelect.appendChild(opt);
         });
     };
 
-    window.login = function() {
+    document.getElementById('login-btn').onclick = () => {
         const c = document.getElementById('class-select').value;
         const n = document.getElementById('name-select').value;
-        if (c && n) location.href = `dashboard.html?class=${c}&name=${encodeURIComponent(n)}`;
+        // 修正：ログイン後はダッシュボードへ
+        if(c && n) location.href = `dashboard.html?class=${c}&name=${encodeURIComponent(n)}`;
     };
 
-    fetchStudents();
+    init();
 </script>
 </body>
 </html>
