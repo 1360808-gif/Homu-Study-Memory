@@ -8,16 +8,25 @@
 <style>
   body { font-family: sans-serif; background-color: #fdfaf0; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
   .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+  
+  h1 { font-size: 24px; color: #d35400; margin-bottom: 20px; }
   .filter-area { background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #fdcb6e; }
-  .section { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
-  
+  .section { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+  h2 { font-size: 18px; color: #2c3e50; border-left: 5px solid #f39c12; padding-left: 10px; text-align: left; }
+
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+  th, td { padding: 12px 8px; border-bottom: 1px solid #eee; text-align: center; }
   th { background-color: #f8f9fa; color: #666; font-size: 13px; }
-  .rank-1 { background-color: #fff7d1; font-weight: bold; color: #d35400; }
   
+  /* ランキングの装飾 */
+  .rank-1 { background-color: #fff9c4; font-weight: bold; color: #d35400; }
+  .rank-2 { background-color: #f1f2f6; font-weight: bold; color: #7f8c8d; }
+  .rank-3 { background-color: #fdf2e9; font-weight: bold; color: #a04000; }
+  .medal { font-size: 18px; }
+
   .chart-container { position: relative; height: 300px; width: 100%; }
-  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #3498db; border: none; border-radius: 10px; cursor: pointer; }
+  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #3498db; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+  button.nav-btn:active { transform: scale(0.98); }
 </style>
 </head>
 <body>
@@ -26,27 +35,27 @@
   <h1>📊 みんなの分析</h1>
 
   <div class="filter-area">
-    <span>📅 きかん：</span>
-    <select id="period-select" style="padding:8px; border-radius:5px;">
+    <span>📅 期間をえらぶ：</span>
+    <select id="period-select" style="padding:8px; border-radius:5px; font-size: 16px;">
         <option value="total">これまでぜんぶ</option>
         <option value="this-week">こんしゅう</option>
         <option value="last-week">せんしゅう</option>
         <option value="this-month">こんげつ</option>
-        <option value="term-1">4月〜8月（1学期）</option>
-        <option value="term-2">9月〜12月（2学期）</option>
-        <option value="term-3">1月〜3月（3学期）</option>
+        <option value="term-1">1学期（4月〜8月）</option>
+        <option value="term-2">2学期（9月〜12月）</option>
+        <option value="term-3">3学期（1月〜3月）</option>
     </select>
   </div>
 
   <div class="section">
-    <h2>🏆 学習時間ランキング</h2>
+    <h2>🏆 学習時間ランキング (TOP10)</h2>
     <table id="ranking-table">
       <thead>
         <tr>
           <th>順位</th>
           <th>名前</th>
           <th>クラス</th>
-          <th>合計時間</th>
+          <th>時間</th>
         </tr>
       </thead>
       <tbody>
@@ -55,8 +64,9 @@
   </div>
 
   <div class="section">
-    <h2>📈 クラスごとの割合</h2>
+    <h2>📈 クラスごとの合計割合</h2>
     <div class="chart-container"><canvas id="pieChart"></canvas></div>
+    <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">※学年全体の学習時間に占める各クラスの割合です</p>
   </div>
 
   <button class="nav-btn" onclick="history.back()">🏠 ダッシュボードにもどる</button>
@@ -82,8 +92,21 @@
   const pieCtx = document.getElementById('pieChart').getContext('2d');
   let pieChart = new Chart(pieCtx, {
     type: 'doughnut',
-    data: { labels: ['1組', '2組', '3組'], datasets: [{ data: [0,0,0], backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'] }]},
-    options: { responsive: true, maintainAspectRatio: false }
+    data: { 
+      labels: ['1組', '2組', '3組'], 
+      datasets: [{ 
+        data: [0,0,0], 
+        backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'],
+        hoverOffset: 4
+      }]
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
   });
 
   onSnapshot(query(collection(db, "learning_logs")), (snapshot) => {
@@ -105,9 +128,9 @@
         return d >= sun;
       }
       if (period === 'last-week') {
-        const lastSun = new Date(now); lastSun.setDate(now.getDate() - now.getDay() - 7); lastSun.setHours(0,0,0,0);
-        const thisSun = new Date(now); thisSun.setDate(now.getDate() - now.getDay()); thisSun.setHours(0,0,0,0);
-        return d >= lastSun && d < thisSun;
+        const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
+        const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
+        return d >= lastSun && d < sun;
       }
       const m = d.getMonth() + 1;
       if (period === 'term-1') return m >= 4 && m <= 8;
@@ -116,25 +139,37 @@
       return true;
     };
 
-    let userAgg = {}; // 個人集計
-    let classAgg = { "1": 0, "2": 0, "3": 0 }; // クラス集計
+    let userAgg = {}; 
+    let classAgg = { "1": 0, "2": 0, "3": 0 };
 
     cachedLogs.forEach(log => {
       if (!isTarget(log.date)) return;
-      const total = log.school + log.self;
-      // 個人
+      const total = (log.school || 0) + (log.self || 0);
+      
       if (!userAgg[log.name]) userAgg[log.name] = { name: log.name, class: log.class, total: 0 };
       userAgg[log.name].total += total;
-      // クラス
+      
       if (classAgg[log.class] !== undefined) classAgg[log.class] += total;
     });
 
-    // ランキング作成（上位10名）
+    // ランキング表示
     const ranking = Object.values(userAgg).sort((a, b) => b.total - a.total).slice(0, 10);
     const tbody = document.querySelector('#ranking-table tbody');
     tbody.innerHTML = "";
+    
     ranking.forEach((u, i) => {
-      const row = `<tr class="${i===0?'rank-1':''}"><td>${i+1}位</td><td>${u.name}</td><td>${u.class}組</td><td>${u.total}分</td></tr>`;
+      let rankClass = "";
+      let medal = (i + 1) + "位";
+      if (i === 0) { rankClass = "rank-1"; medal = "🥇 1位"; }
+      if (i === 1) { rankClass = "rank-2"; medal = "🥈 2位"; }
+      if (i === 2) { rankClass = "rank-3"; medal = "🥉 3位"; }
+      
+      const row = `<tr class="${rankClass}">
+        <td>${medal}</td>
+        <td>${u.name}</td>
+        <td>${u.class}組</td>
+        <td>${u.total}分</td>
+      </tr>`;
       tbody.innerHTML += row;
     });
 
