@@ -1,5 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>がんばり分析 - 学習アプリ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
+  .app-container { background: #fff; width: 95%; max-width: 850px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+  
+  .filter-area { background-color: #ffeaa7; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 2px solid #fdcb6e; }
+  .mode-selector { display: flex; justify-content: center; gap: 20px; margin-bottom: 10px; background: #fff; padding: 10px; border-radius: 10px; flex-wrap: wrap; }
+  .mode-selector label { font-weight: bold; cursor: pointer; color: #2c3e50; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+
+  .section { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
+  h2 { font-size: 18px; color: #2c3e50; border-left: 5px solid #3498db; padding-left: 10px; text-align: left; margin-bottom: 15px; }
+
+  /* グラフエリア */
+  .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 10px; border-radius: 8px; background: #fdfdfd; }
+  .chart-container { position: relative; height: 420px; min-width: 750px; padding: 10px; }
+
+  .note { font-size: 12px; color: #666; background: #e8f4f8; padding: 10px; border-radius: 8px; text-align: left; margin-top: 10px; line-height: 1.5; }
+  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #3498db; border: none; border-radius: 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <h1>📊 じぶんとみんなのがんばり分析</h1>
+
+  <div class="filter-area">
+    <div class="mode-selector">
+        <label><input type="radio" name="displayMode" value="top20" checked> 🏆 TOP20と自分をくらべる</label>
+        <label><input type="radio" name="displayMode" value="nearMe"> 🤝 自分のまわりとくらべる</label>
+    </div>
+
+    <div style="margin-bottom: 15px; font-size: 14px; background: #fff; padding: 8px; border-radius: 8px; display: inline-block;">
+        どの時間でならべる？：
+        <label><input type="radio" name="viewType" value="all" checked> ぜんぶ</label>
+        <label><input type="radio" name="viewType" value="school"> がっこう</label>
+        <label><input type="radio" name="viewType" value="self"> じぶん</label>
+    </div>
+    
+    <div>
+        <span style="font-size: 14px;">📅 きかん：</span>
+        <select id="period-select" style="padding:5px; border-radius:5px; font-size: 14px;">
+            <option value="total">これまでぜんぶ</option>
+            <option value="this-week">こんしゅう</option>
+            <option value="last-week">せんしゅう</option>
+            <option value="this-month">こんげつ</option>
+        </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 id="chart-title">グラフ読み込み中...</h2>
+    <div class="chart-wrapper">
+      <div class="chart-container">
+        <canvas id="analysisChart"></canvas>
+      </div>
+    </div>
+    <div class="note" id="ai-hint">
+        💡 <strong>⭐️があなたです。</strong><br>
+        「がっこう」や「じぶん」を選ぶと、その時間の長さで順番が入れかわるよ！
+    </div>
+  </div>
+
+  <button class="nav-btn" onclick="history.back()">🏠 ダッシュボードにもどる</button>
+</div>
+
 <script type="module">
-  // Firebase設定などはそのまま維持（中略）
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getFirestore, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+    authDomain: "study-app-4215b.firebaseapp.com",
+    projectId: "study-app-4215b",
+    storageBucket: "study-app-4215b.firebasestorage.app",
+    messagingSenderId: "896254140020",
+    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const params = new URLSearchParams(window.location.search);
+  const myName = params.get('name') || "ゲスト";
+
+  let cachedLogs = [];
+  const ctx = document.getElementById('analysisChart').getContext('2d');
+  
+  let analysisChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: '学校', data: [], backgroundColor: [], borderRadius: 4 },
+      { label: 'じぶん', data: [], backgroundColor: [], borderRadius: 4 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { 
+        x: { stacked: true, ticks: { font: { size: 10, weight: 'bold' }, lineHeight: 1.4 } }, 
+        y: { stacked: true, beginAtZero: true } 
+      },
+      plugins: { 
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}分` } }
+      }
+    }
+  });
+
+  onSnapshot(query(collection(db, "learning_logs")), (snapshot) => {
+    cachedLogs = [];
+    snapshot.forEach(doc => cachedLogs.push(doc.data()));
+    render();
+  });
 
   function render() {
     const displayMode = document.querySelector('input[name="displayMode"]:checked').value;
@@ -32,28 +146,29 @@
       userAgg[log.name].self += (log.self || 0);
     });
 
-    // 2. ソートと順位付け
-    const allUsers = Object.values(userAgg).map(u => ({
-      ...u,
-      total: (viewType === 'all' ? (u.school + u.self) : (viewType === 'school' ? u.school : u.self))
-    })).sort((a, b) => b.total - a.total);
+    // 2. 並び替え（選択されたviewTypeに基づく）
+    const allUsers = Object.values(userAgg).map(u => {
+      let sortVal = 0;
+      if (viewType === 'all') sortVal = u.school + u.self;
+      else if (viewType === 'school') sortVal = u.school;
+      else if (viewType === 'self') sortVal = u.self;
+      return { ...u, currentTotal: sortVal };
+    }).sort((a, b) => b.currentTotal - a.currentTotal);
     
     allUsers.forEach((u, i) => u.rank = i + 1);
 
-    // 3. 表示データの抽出（ここが今回のキモです）
+    // 3. 表示データの抽出と並び替え
     let displayData = [];
     const myIndex = allUsers.findIndex(u => u.name === myName);
     const myData = allUsers[myIndex];
 
     if (displayMode === 'top20') {
       document.getElementById('chart-title').innerText = "🏆 TOP20とあなたの比較";
-      
       if (myIndex !== -1) {
-        // 自分のデータを一番左に。残りのTOP20（自分以外）を繋げる
+        // 自分を一番左に、残りのTOP20（自分以外）を繋げる
         const others = allUsers.filter(u => u.name !== myName).slice(0, 19);
         displayData = [myData, ...others];
       } else {
-        // 自分がデータにない場合は通常のTOP20
         displayData = allUsers.slice(0, 20);
       }
     } else {
@@ -68,26 +183,52 @@
       }
     }
 
-    // 4. 名前表示とグラフ更新
+    // 4. ラベル作成（改行して時間を表示）
     analysisChart.data.labels = displayData.map(u => {
       const isMe = (u.name === myName);
-      if (isMe) return `⭐️${u.name}(${u.rank}位)`;
+      const h = Math.floor(u.currentTotal / 60);
+      const m = u.currentTotal % 60;
+      const timeStr = h > 0 ? `${h}時間${m}分` : `${m}分`;
       
-      // 名前表示の制限（上位20人、または自分の前後は表示）
       const isTop = (u.rank <= 20);
-      const isNearMe = (myIndex !== -1 && Math.abs(u.rank - (myIndex + 1)) <= 3);
-      
-      return (isTop || isNearMe) ? `${u.rank}位:${u.name}` : `${u.rank}位:(匿名)`;
+      const isNear = (myIndex !== -1 && Math.abs(u.rank - (myIndex + 1)) <= 3);
+
+      let nameLabel = "";
+      if (isMe) nameLabel = `⭐️${u.name}(${u.rank}位)`;
+      else if (isTop || isNear) nameLabel = `${u.rank}位:${u.name}`;
+      else nameLabel = `${u.rank}位:(匿名)`;
+
+      return [nameLabel, timeStr];
     });
 
-    analysisChart.data.datasets[0].data = displayData.map(u => u.school);
-    analysisChart.data.datasets[1].data = displayData.map(u => u.self);
-    
-    // 色：自分は強調色、他はブルー系
-    analysisChart.data.datasets[0].backgroundColor = displayData.map(u => u.name === myName ? '#e67e22' : '#2980b9');
-    analysisChart.data.datasets[1].backgroundColor = displayData.map(u => u.name === myName ? '#f39c12' : '#3498db');
-    
+    // 5. データセットの更新（色と表示/非表示）
+    if (viewType === 'all') {
+      analysisChart.data.datasets[0].data = displayData.map(u => u.school);
+      analysisChart.data.datasets[1].data = displayData.map(u => u.self);
+      analysisChart.data.datasets[0].hidden = false;
+      analysisChart.data.datasets[1].hidden = false;
+      analysisChart.data.datasets[0].backgroundColor = displayData.map(u => u.name === myName ? '#e67e22' : '#2980b9');
+      analysisChart.data.datasets[1].backgroundColor = displayData.map(u => u.name === myName ? '#f39c12' : '#3498db');
+    } else if (viewType === 'school') {
+      analysisChart.data.datasets[0].data = displayData.map(u => u.school);
+      analysisChart.data.datasets[1].data = displayData.map(u => 0);
+      analysisChart.data.datasets[0].hidden = false;
+      analysisChart.data.datasets[1].hidden = true;
+      analysisChart.data.datasets[0].backgroundColor = displayData.map(u => u.name === myName ? '#e67e22' : '#2980b9');
+    } else {
+      analysisChart.data.datasets[0].data = displayData.map(u => 0);
+      analysisChart.data.datasets[1].data = displayData.map(u => u.self);
+      analysisChart.data.datasets[0].hidden = true;
+      analysisChart.data.datasets[1].hidden = false;
+      analysisChart.data.datasets[1].backgroundColor = displayData.map(u => u.name === myName ? '#f39c12' : '#3498db');
+    }
+
     analysisChart.update();
   }
-  // 以下イベントリスナー等は変更なし
+
+  // イベント登録
+  document.getElementById('period-select').addEventListener('change', render);
+  document.querySelectorAll('input').forEach(el => el.addEventListener('change', render));
 </script>
+</body>
+</html>
