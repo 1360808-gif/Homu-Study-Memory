@@ -5,47 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>学習入力</title>
     <style>
-        body { font-family: sans-serif; background-color: #fffbe6; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; background-color: #fffbe6; padding: 20px; text-align: center; margin: 0; }
         .container { background: white; padding: 20px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
-        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .tab-btn.active { background: #fff; color: #d35400; }
-        .card { background: #fdfaf0; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 10px; text-align: left; }
-        .row { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
-        input[type="number"] { width: 50px; padding: 8px; border: 1px solid #f39c12; border-radius: 5px; text-align: center; }
-        input[type="date"] { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
-        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .tab-btn.active { background: #fff; color: #d35400; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .card { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 20px; margin-bottom: 15px; text-align: left; position: relative; }
+        .card h3 { margin-top: 0; color: #d35400; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        /* 金曜日限定のバッジ */
+        .fri-badge { display: none; background: #e74c3c; color: white; font-size: 11px; padding: 3px 8px; border-radius: 5px; position: absolute; top: -10px; right: 10px; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+        .row { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
+        .input-group { display: flex; align-items: center; gap: 5px; }
+        input[type="number"] { width: 60px; padding: 10px; border: 2px solid #f39c12; border-radius: 8px; text-align: center; font-size: 18px; }
+        input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; width: 100%; box-sizing: border-box; }
+        
+        .help-text { font-size: 12px; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
+        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
+        .btn-back { margin-top: 15px; background: none; border: none; text-decoration: underline; cursor: pointer; color: #7f8c8d; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2 id="user-info">読み込み中...</h2>
+    
     <div class="tab-menu">
         <button id="btn-day" class="tab-btn active" onclick="switchMode('day')">1日分</button>
-        <button id="btn-week" class="tab-btn" onclick="switchMode('week')">1週間分</button>
+        <button id="btn-week" class="tab-btn" onclick="switchMode('week')">1週間分まとめ</button>
     </div>
 
     <div id="area-day">
         <div class="card">
-            日付: <input type="date" id="date-day">
-            <div class="row">🏫 学校: <span><input type="number" id="ds-h">時間 <input type="number" id="ds-m">分</span></div>
-            <div class="row">🏠 自分: <span><input type="number" id="df-h">時間 <input type="number" id="df-m">分</span></div>
+            <h3>📅 いつの分？</h3>
+            <input type="date" id="date-day">
+        </div>
+        <div class="card">
+            <h3>⏰ 時間</h3>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ds-h">時<input type="number" id="ds-m">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="df-h">時<input type="number" id="df-m">分</div></div>
         </div>
     </div>
 
     <div id="area-week" style="display:none;">
-        月曜日の日付: <input type="date" id="date-week" onchange="updateWeek()">
-        <div id="week-list"></div>
+        <div class="card">
+            <div id="fri-msg" class="fri-badge">金曜日だね！まとめよう✨</div>
+            <h3>📅 何週目？</h3>
+            <input type="date" id="date-week">
+            <p id="week-guide" class="help-text" style="color:#d35400; font-weight:bold;"></p>
+        </div>
+        <div class="card">
+            <h3>⏰ 1週間の「合計」</h3>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ws-h">時<input type="number" id="ws-m">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="wf-h">時<input type="number" id="wf-m">分</div></div>
+        </div>
     </div>
 
     <button id="send-btn" class="btn-submit">送信する！</button>
-    <button style="margin-top:10px; background:none; border:none; text-decoration:underline; cursor:pointer;" onclick="history.back()">もどる</button>
+    <button class="btn-back" onclick="history.back()">もどる</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, writeBatch, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -62,9 +87,32 @@
     const myName = params.get('name'), myClass = params.get('class');
     document.getElementById('user-info').innerText = myName + " さんの入力";
 
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date-day').value = today;
-    document.getElementById('date-week').value = today;
+    // 日付の初期設定
+    const now = new Date();
+    document.getElementById('date-day').value = now.toISOString().split('T')[0];
+
+    // 直近の月曜日を計算する関数
+    function getRecentMonday(d) {
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 日曜なら-6日、それ以外は月曜(1)との差
+        return new Date(d.setDate(diff));
+    }
+    const monday = getRecentMonday(new Date());
+    document.getElementById('date-week').value = monday.toISOString().split('T')[0];
+
+    // 金曜日ならメッセージを出す
+    if(now.getDay() === 5) {
+        document.getElementById('fri-msg').style.display = 'block';
+    }
+
+    // 1週間ガイド
+    function updateWeekGuide() {
+        const d = new Date(document.getElementById('date-week').value);
+        const end = new Date(d); end.setDate(d.getDate() + 6);
+        document.getElementById('week-guide').innerText = `月曜 ${d.getMonth()+1}/${d.getDate()} 〜 日曜 ${end.getMonth()+1}/${end.getDate()} の分`;
+    }
+    document.getElementById('date-week').onchange = updateWeekGuide;
+    updateWeekGuide();
 
     let mode = 'day';
     window.switchMode = (m) => {
@@ -73,47 +121,29 @@
         document.getElementById('btn-week').classList.toggle('active', m==='week');
         document.getElementById('area-day').style.display = m==='day'?'block':'none';
         document.getElementById('area-week').style.display = m==='week'?'block':'none';
-        if(m==='week') updateWeek();
-    };
-
-    window.updateWeek = () => {
-        const start = new Date(document.getElementById('date-week').value);
-        const list = document.getElementById('week-list');
-        list.innerHTML = "";
-        for(let i=0; i<7; i++){
-            const d = new Date(start); d.setDate(start.getDate()+i);
-            list.innerHTML += `<div class="card"><b>${d.toLocaleDateString()}</b><div class="row">🏫<input type="number" id="ws-h-${i}">時<input type="number" id="ws-m-${i}">分 / 🏠<input type="number" id="wf-h-${i}">時<input type="number" id="wf-m-${i}">分</div></div>`;
-        }
     };
 
     document.getElementById('send-btn').onclick = async () => {
-        const batch = writeBatch(db);
-        let count = 0;
+        const btn = document.getElementById('send-btn');
+        let h, m, fh, fm, date;
         if(mode === 'day'){
-            const sh = parseInt(document.getElementById('ds-h').value)||0, sm = parseInt(document.getElementById('ds-m').value)||0;
-            const fh = parseInt(document.getElementById('df-h').value)||0, fm = parseInt(document.getElementById('df-m').value)||0;
-            if(sh+sm+fh+fm > 0){
-                const ref = doc(collection(db, "learning_logs"));
-                batch.set(ref, {name:myName, class:myClass, school:sh*60+sm, self:fh*60+fm, date:document.getElementById('date-day').value, timestamp:serverTimestamp()});
-                count++;
-            }
+            h = parseInt(document.getElementById('ds-h').value)||0; m = parseInt(document.getElementById('ds-m').value)||0;
+            fh = parseInt(document.getElementById('df-h').value)||0; fm = parseInt(document.getElementById('df-m').value)||0;
+            date = document.getElementById('date-day').value;
         } else {
-            const start = new Date(document.getElementById('date-week').value);
-            for(let i=0; i<7; i++){
-                const sh = parseInt(document.getElementById(`ws-h-${i}`).value)||0, sm = parseInt(document.getElementById(`ws-m-${i}`).value)||0;
-                const fh = parseInt(document.getElementById(`wf-h-${i}`).value)||0, fm = parseInt(document.getElementById(`wf-m-${i}`).value)||0;
-                if(sh+sm+fh+fm > 0){
-                    const d = new Date(start); d.setDate(start.getDate()+i);
-                    const ref = doc(collection(db, "learning_logs"));
-                    batch.set(ref, {name:myName, class:myClass, school:sh*60+sm, self:fh*60+fm, date:d.toISOString().split('T')[0], timestamp:serverTimestamp()});
-                    count++;
-                }
-            }
+            h = parseInt(document.getElementById('ws-h').value)||0; m = parseInt(document.getElementById('ws-m').value)||0;
+            fh = parseInt(document.getElementById('wf-h').value)||0; fm = parseInt(document.getElementById('wf-m').value)||0;
+            date = document.getElementById('date-week').value;
         }
-        if(count > 0) {
-            await batch.commit(); alert("送信成功！");
+        if(h+m+fh+fm === 0) { alert("時間をいれてね！"); return; }
+        btn.disabled = true;
+        try {
+            await addDoc(collection(db, "learning_logs"), {
+                name: myName, class: myClass, school: h*60+m, self: fh*60+fm, date: date, mode: mode, timestamp: serverTimestamp()
+            });
+            alert("送信しました！");
             location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
-        }
+        } catch (e) { alert("エラーです"); btn.disabled = false; }
     };
 </script>
 </body>
