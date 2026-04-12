@@ -5,23 +5,52 @@
     <title>ログイン - 学習アプリ</title>
     <style>
         body { font-family: sans-serif; background: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-box { background: white; padding: 30px; border-radius: 20px; width: 300px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 10px; border: 1px solid #ccc; font-size: 16px; }
-        button { background: #f39c12; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .login-box { background: white; padding: 30px; border-radius: 20px; width: 340px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; color: #2c3e50; margin-bottom: 20px; }
+        select, input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        
+        /* 入力欄のデザイン強化 */
+        #pin-input { 
+            border: 2px solid #f39c12; 
+            text-align: center; 
+            font-size: 22px; 
+            letter-spacing: 3px; 
+            background-color: #fffaf0;
+        }
+        
+        button { background: #f39c12; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 15px; }
+        button:hover { background: #e67e22; }
+        button:disabled { background: #ccc; }
+
+        .msg { font-size: 13px; line-height: 1.5; margin-bottom: 10px; padding: 10px; border-radius: 8px; display: none; }
+        #first-time-msg { background-color: #e1f5fe; color: #0288d1; border: 1px solid #b3e5fc; }
+        #login-msg { background-color: #fff9c4; color: #f57f17; border: 1px solid #fff176; }
+        
+        .char-count { font-size: 11px; color: #999; text-align: right; margin-top: -5px; }
     </style>
 </head>
 <body>
     <div class="login-box">
         <h1>🌟 ログイン</h1>
         <div id="status">名簿を確認中...</div>
+        
         <select id="class-select" style="display:none;"><option value="">クラスを選択</option></select>
         <select id="name-select" style="display:none;"><option value="">名前を選択</option></select>
+        
+        <div id="pin-area" style="display:none;">
+            <div id="first-time-msg" class="msg">✨ <b>はじめてのログインだね！</b><br>これからずっと使う「8けたの数字」を決めて入力してね。</div>
+            <div id="login-msg" class="msg">🔑 <b>あんしょう番号をいれてね</b><br>自分で決めた「8けたの数字」だよ。</div>
+            
+            <input type="password" id="pin-input" maxlength="8" placeholder="********" inputmode="numeric">
+            <div class="char-count" id="char-count">0 / 8 けた</div>
+        </div>
+        
         <button id="login-btn" style="display:none;">はじめる！</button>
     </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -36,11 +65,11 @@
     const db = getFirestore(app);
     let allStudents = [];
 
+    // 初期化：名簿の読み込み
     async function init() {
         try {
-            const q = query(collection(db, "students")); 
-            const snap = await getDocs(q);
-            snap.forEach(doc => allStudents.push(doc.data()));
+            const snap = await getDocs(query(collection(db, "students")));
+            snap.forEach(d => allStudents.push({ id: d.id, ...d.data() }));
 
             const classes = [...new Set(allStudents.map(s => String(s.class)))].sort();
             const cSelect = document.getElementById('class-select');
@@ -59,6 +88,7 @@
         }
     }
 
+    // クラス選択時
     document.getElementById('class-select').onchange = (e) => {
         const nSelect = document.getElementById('name-select');
         nSelect.innerHTML = '<option value="">名前を選択</option>';
@@ -68,13 +98,77 @@
             opt.value = s.name; opt.textContent = s.name;
             nSelect.appendChild(opt);
         });
+        document.getElementById('pin-area').style.display = 'none';
     };
 
-    document.getElementById('login-btn').onclick = () => {
+    // 名前選択時（パスワード設定済みかチェック）
+    document.getElementById('name-select').onchange = () => {
         const c = document.getElementById('class-select').value;
         const n = document.getElementById('name-select').value;
-        // 修正：ログイン後はダッシュボードへ
-        if(c && n) location.href = `dashboard.html?class=${c}&name=${encodeURIComponent(n)}`;
+        const student = allStudents.find(s => String(s.class) === c && s.name === n);
+
+        if (student) {
+            document.getElementById('pin-area').style.display = 'block';
+            document.getElementById('pin-input').value = "";
+            updateCount();
+
+            if (!student.pin) {
+                document.getElementById('first-time-msg').style.display = 'block';
+                document.getElementById('login-msg').style.display = 'none';
+            } else {
+                document.getElementById('first-time-msg').style.display = 'none';
+                document.getElementById('login-msg').style.display = 'block';
+            }
+        }
+    };
+
+    // 桁数カウントの表示更新
+    const pinInput = document.getElementById('pin-input');
+    const countDisp = document.getElementById('char-count');
+    function updateCount() {
+        const len = pinInput.value.length;
+        countDisp.innerText = `${len} / 8 けた`;
+        countDisp.style.color = len === 8 ? "#27ae60" : "#999";
+    }
+    pinInput.oninput = updateCount;
+
+    // ログイン・登録ボタン
+    document.getElementById('login-btn').onclick = async () => {
+        const c = document.getElementById('class-select').value;
+        const n = document.getElementById('name-select').value;
+        const inputPin = pinInput.value;
+
+        if (inputPin.length !== 8) {
+            alert("あんしょう番号は「8けた」でいれてね！");
+            return;
+        }
+
+        const student = allStudents.find(s => String(s.class) === c && s.name === n);
+        if (!student) return;
+
+        const btn = document.getElementById('login-btn');
+        btn.disabled = true;
+
+        if (!student.pin) {
+            // 初回登録
+            try {
+                const studentDoc = doc(db, "students", student.id);
+                await updateDoc(studentDoc, { pin: inputPin });
+                alert("登録できたよ！この8けたの番号はわすれないようにメモしておこうね。");
+                location.href = `dashboard.html?class=${c}&name=${encodeURIComponent(n)}`;
+            } catch (e) {
+                alert("エラーが起きました。もういちど試してね。");
+                btn.disabled = false;
+            }
+        } else {
+            // 照合
+            if (String(student.pin) === inputPin) {
+                location.href = `dashboard.html?class=${c}&name=${encodeURIComponent(n)}`;
+            } else {
+                alert("あんしょう番号が ちがいます！");
+                btn.disabled = false;
+            }
+        }
     };
 
     init();
