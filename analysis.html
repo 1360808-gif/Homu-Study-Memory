@@ -3,56 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分析・ランキング</title>
+<title>みんなの分析 - 学習アプリ</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  /* 元のデザインを継承 */
-  body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
-  .app-container { background: #fff; width: 95%; max-width: 900px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
-  h1 { font-size: 22px; color: #2c3e50; margin-bottom: 15px; }
-  .global-filter { display: flex; justify-content: space-around; background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #fdcb6e; }
-  .controls { background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
-  .controls select { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #bdc3c7; }
-  .note { font-size: 13px; color: #2c3e50; margin-bottom: 15px; text-align: left; font-weight: bold; background: #e8f8f5; padding: 10px; border-radius: 5px; border-left: 5px solid #1abc9c; }
-  .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 20px; border: 1px solid #eee; border-radius: 8px;}
-  .chart-container { position: relative; height: 450px; min-width: 800px; padding: 10px;}
-  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #27ae60; border: none; border-radius: 10px; cursor: pointer; }
+  body { font-family: sans-serif; background-color: #fdfaf0; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
+  .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+  .filter-area { background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #fdcb6e; }
+  .section { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+  
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+  th { background-color: #f8f9fa; color: #666; font-size: 13px; }
+  .rank-1 { background-color: #fff7d1; font-weight: bold; color: #d35400; }
+  
+  .chart-container { position: relative; height: 300px; width: 100%; }
+  button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #3498db; border: none; border-radius: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>📊 みんなの「がんばり分析」</h1>
+  <h1>📊 みんなの分析</h1>
 
-  <div class="global-filter">
-    <label><input type="radio" name="viewType" value="all" checked> ぜんぶ</label>
-    <label><input type="radio" name="viewType" value="school"> がっこう</label>
-    <label><input type="radio" name="viewType" value="self"> じぶん</label>
-  </div>
-
-  <div class="controls">
-    <label style="font-weight: bold; color: #2980b9;">表示順:</label>
-    <select id="sort-mode">
-      <option value="total-desc">🏆 全体：長い順</option>
-      <option value="total-asc">🌱 全体：短い順</option>
-      <option value="close-to-me" selected>🤝 自分と近い人</option>
+  <div class="filter-area">
+    <span>📅 きかん：</span>
+    <select id="period-select" style="padding:8px; border-radius:5px;">
+        <option value="total">これまでぜんぶ</option>
+        <option value="this-week">こんしゅう</option>
+        <option value="last-week">せんしゅう</option>
+        <option value="this-month">こんげつ</option>
+        <option value="term-1">4月〜8月（1学期）</option>
+        <option value="term-2">9月〜12月（2学期）</option>
+        <option value="term-3">1月〜3月（3学期）</option>
     </select>
   </div>
 
-  <p class="note">🏆 トップ20名は名前が表示されます！それ以外の人は匿名（イニシャル）で表示されます。</p>
-
-  <div class="chart-wrapper">
-    <div class="chart-container" id="chart-box">
-      <canvas id="analysisChart"></canvas>
-    </div>
+  <div class="section">
+    <h2>🏆 学習時間ランキング</h2>
+    <table id="ranking-table">
+      <thead>
+        <tr>
+          <th>順位</th>
+          <th>名前</th>
+          <th>クラス</th>
+          <th>合計時間</th>
+        </tr>
+      </thead>
+      <tbody>
+        </tbody>
+    </table>
   </div>
 
-  <button class="nav-btn" id="back-dashboard">🏠 ダッシュボードにもどる</button>
+  <div class="section">
+    <h2>📈 クラスごとの割合</h2>
+    <div class="chart-container"><canvas id="pieChart"></canvas></div>
+  </div>
+
+  <button class="nav-btn" onclick="history.back()">🏠 ダッシュボードにもどる</button>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -65,114 +77,73 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  let cachedLogs = [];
 
-  const params = new URLSearchParams(window.location.search);
-  const myName = params.get('name') || "ゲスト";
-  const myClass = params.get('class') || "1";
-
-  let allLogs = [];
-  let studentData = {};
-
-  const ctx = document.getElementById('analysisChart').getContext('2d');
-  let analysisChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: [], datasets: [ { label: 'がっこう', data: [], backgroundColor: [] }, { label: 'じぶん', data: [], backgroundColor: [] } ] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
-    }
+  const pieCtx = document.getElementById('pieChart').getContext('2d');
+  let pieChart = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: { labels: ['1組', '2組', '3組'], datasets: [{ data: [0,0,0], backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'] }]},
+    options: { responsive: true, maintainAspectRatio: false }
   });
 
-  // データ取得と集計
-  async function loadData() {
-    const q = query(collection(db, "learning_logs"));
-    const querySnapshot = await getDocs(q);
-    
-    let summary = {}; // 名前ごとに集計
-    querySnapshot.forEach(doc => {
-      const data = doc.data();
-      if (!summary[data.name]) {
-        summary[data.name] = { name: data.name, school: 0, self: 0 };
+  onSnapshot(query(collection(db, "learning_logs")), (snapshot) => {
+    cachedLogs = [];
+    snapshot.forEach(doc => cachedLogs.push(doc.data()));
+    render();
+  });
+
+  function render() {
+    const period = document.getElementById('period-select').value;
+    const now = new Date();
+
+    const isTarget = (dateStr) => {
+      const d = new Date(dateStr);
+      if (period === 'total') return true;
+      if (period === 'this-month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      if (period === 'this-week') {
+        const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
+        return d >= sun;
       }
-      summary[data.name].school += data.school;
-      summary[data.name].self += data.self;
+      if (period === 'last-week') {
+        const lastSun = new Date(now); lastSun.setDate(now.getDate() - now.getDay() - 7); lastSun.setHours(0,0,0,0);
+        const thisSun = new Date(now); thisSun.setDate(now.getDate() - now.getDay()); thisSun.setHours(0,0,0,0);
+        return d >= lastSun && d < thisSun;
+      }
+      const m = d.getMonth() + 1;
+      if (period === 'term-1') return m >= 4 && m <= 8;
+      if (period === 'term-2') return m >= 9 && m <= 12;
+      if (period === 'term-3') return m >= 1 && m <= 3;
+      return true;
+    };
+
+    let userAgg = {}; // 個人集計
+    let classAgg = { "1": 0, "2": 0, "3": 0 }; // クラス集計
+
+    cachedLogs.forEach(log => {
+      if (!isTarget(log.date)) return;
+      const total = log.school + log.self;
+      // 個人
+      if (!userAgg[log.name]) userAgg[log.name] = { name: log.name, class: log.class, total: 0 };
+      userAgg[log.name].total += total;
+      // クラス
+      if (classAgg[log.class] !== undefined) classAgg[log.class] += total;
     });
 
-    studentData = Object.values(summary);
-    updateChart();
-  }
-
-  function updateChart() {
-    const viewType = document.querySelector('input[name="viewType"]:checked').value;
-    const sortMode = document.getElementById('sort-mode').value;
-
-    const getScore = (s) => (viewType === 'all' ? (s.school + s.self) : (viewType === 'school' ? s.school : s.self));
-
-    // スコア順にソートして順位付与
-    let ranked = [...studentData].sort((a, b) => getScore(b) - getScore(a));
-    ranked.forEach((s, i) => s.rank = i + 1);
-
-    const me = ranked.find(s => s.name === myName) || { name: myName, school: 0, self: 0, rank: 999 };
-    let displayList = [];
-
-    if (sortMode === 'total-desc') {
-      displayList = ranked;
-    } else if (sortMode === 'total-asc') {
-      displayList = [...ranked].reverse();
-    } else { // close-to-me
-      const myIdx = ranked.findIndex(s => s.name === myName);
-      if (myIdx === -1) {
-        displayList = [me];
-      } else {
-        const start = Math.max(0, myIdx - 3);
-        const end = Math.min(ranked.length, myIdx + 4);
-        displayList = ranked.slice(start, end);
-      }
-    }
-
-    // グラフ反映
-    const labels = [];
-    const sData = [];
-    const fData = [];
-    const sCols = [];
-    const fCols = [];
-
-    displayList.forEach(s => {
-      // ラベル（20位以内 or 自分 or 前後3人は名前出し）
-      const isMe = s.name === myName;
-      const isClose = Math.abs(s.rank - me.rank) <= 3;
-      const isTop = s.rank <= 20;
-
-      if (isMe) {
-        labels.push(`⭐️ ${s.name}`);
-        sCols.push('#c0392b'); fCols.push('#e74c3c');
-      } else if (isTop || isClose) {
-        labels.push(`${s.rank}位: ${s.name}`);
-        sCols.push('#2980b9'); fCols.push('#3498db');
-      } else {
-        labels.push(`${s.rank}位: ${s.name.charAt(0)}...`);
-        sCols.push('#7f8c8d'); fCols.push('#95a5a6');
-      }
-      sData.push(s.school);
-      fData.push(s.self);
+    // ランキング作成（上位10名）
+    const ranking = Object.values(userAgg).sort((a, b) => b.total - a.total).slice(0, 10);
+    const tbody = document.querySelector('#ranking-table tbody');
+    tbody.innerHTML = "";
+    ranking.forEach((u, i) => {
+      const row = `<tr class="${i===0?'rank-1':''}"><td>${i+1}位</td><td>${u.name}</td><td>${u.class}組</td><td>${u.total}分</td></tr>`;
+      tbody.innerHTML += row;
     });
 
-    analysisChart.data.labels = labels;
-    analysisChart.data.datasets[0].data = sData;
-    analysisChart.data.datasets[0].backgroundColor = sCols;
-    analysisChart.data.datasets[1].data = fData;
-    analysisChart.data.datasets[1].backgroundColor = fCols;
-    analysisChart.update();
+    // 円グラフ更新
+    pieChart.data.datasets[0].data = [classAgg["1"], classAgg["2"], classAgg["3"]];
+    pieChart.update();
   }
 
-  // イベント登録
-  document.querySelectorAll('input[name="viewType"]').forEach(r => r.addEventListener('change', updateChart));
-  document.getElementById('sort-mode').addEventListener('change', updateChart);
-  document.getElementById('back-dashboard').onclick = () => {
-    location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
-  };
-
-  loadData();
+  document.getElementById('period-select').addEventListener('change', render);
 </script>
 </body>
 </html>
