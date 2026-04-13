@@ -16,7 +16,6 @@
   .section { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
   h2 { font-size: 18px; color: #2c3e50; border-left: 5px solid #3498db; padding-left: 10px; text-align: left; margin-bottom: 15px; }
 
-  /* グラフエリア */
   .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 10px; border-radius: 8px; background: #fdfdfd; }
   .chart-container { position: relative; height: 420px; min-width: 750px; padding: 10px; }
 
@@ -49,6 +48,9 @@
             <option value="this-week">こんしゅう</option>
             <option value="last-week">せんしゅう</option>
             <option value="this-month">こんげつ</option>
+            <option value="term-1">🎒 1学期（4月〜8月）</option>
+            <option value="term-2">🎄 2学期（9月〜12月）</option>
+            <option value="term-3">🌸 3学期（1月〜3月）</option>
         </select>
     </div>
   </div>
@@ -60,9 +62,8 @@
         <canvas id="analysisChart"></canvas>
       </div>
     </div>
-    <div class="note" id="ai-hint">
-        💡 <strong>⭐️があなたです。</strong><br>
-        「がっこう」や「じぶん」を選ぶと、その時間の長さで順番が入れかわるよ！
+    <div class="note">
+        💡 <strong>⭐️があなたです。</strong> 期間をえらぶと、そのときの合計時間でならびかわるよ！
     </div>
   </div>
 
@@ -123,6 +124,8 @@
 
     const isTarget = (dateStr) => {
       const d = new Date(dateStr);
+      const m = d.getMonth() + 1; // 1-12月
+      
       if (period === 'total') return true;
       if (period === 'this-month') return d.getMonth() === now.getMonth();
       if (period === 'this-week') {
@@ -134,10 +137,13 @@
         const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
         return d >= lastSun && d < sun;
       }
+      // 学期別フィルタ
+      if (period === 'term-1') return m >= 4 && m <= 8;
+      if (period === 'term-2') return m >= 9 && m <= 12;
+      if (period === 'term-3') return m >= 1 && m <= 3;
       return true;
     };
 
-    // 1. 集計
     let userAgg = {};
     cachedLogs.forEach(log => {
       if (!isTarget(log.date)) return;
@@ -146,7 +152,6 @@
       userAgg[log.name].self += (log.self || 0);
     });
 
-    // 2. 並び替え（選択されたviewTypeに基づく）
     const allUsers = Object.values(userAgg).map(u => {
       let sortVal = 0;
       if (viewType === 'all') sortVal = u.school + u.self;
@@ -157,7 +162,6 @@
     
     allUsers.forEach((u, i) => u.rank = i + 1);
 
-    // 3. 表示データの抽出と並び替え
     let displayData = [];
     const myIndex = allUsers.findIndex(u => u.name === myName);
     const myData = allUsers[myIndex];
@@ -165,7 +169,6 @@
     if (displayMode === 'top20') {
       document.getElementById('chart-title').innerText = "🏆 TOP20とあなたの比較";
       if (myIndex !== -1) {
-        // 自分を一番左に、残りのTOP20（自分以外）を繋げる
         const others = allUsers.filter(u => u.name !== myName).slice(0, 19);
         displayData = [myData, ...others];
       } else {
@@ -174,7 +177,6 @@
     } else {
       document.getElementById('chart-title').innerText = "🤝 自分のまわり（前後3名）";
       if (myIndex !== -1) {
-        // 自分の前後3人を抽出（自分が中央）
         const start = Math.max(0, myIndex - 3);
         const end = Math.min(allUsers.length, myIndex + 4);
         displayData = allUsers.slice(start, end);
@@ -183,50 +185,38 @@
       }
     }
 
-    // 4. ラベル作成（改行して時間を表示）
     analysisChart.data.labels = displayData.map(u => {
       const isMe = (u.name === myName);
       const h = Math.floor(u.currentTotal / 60);
       const m = u.currentTotal % 60;
       const timeStr = h > 0 ? `${h}時間${m}分` : `${m}分`;
-      
       const isTop = (u.rank <= 20);
       const isNear = (myIndex !== -1 && Math.abs(u.rank - (myIndex + 1)) <= 3);
-
-      let nameLabel = "";
-      if (isMe) nameLabel = `⭐️${u.name}(${u.rank}位)`;
-      else if (isTop || isNear) nameLabel = `${u.rank}位:${u.name}`;
-      else nameLabel = `${u.rank}位:(匿名)`;
-
+      let nameLabel = isMe ? `⭐️${u.name}(${u.rank}位)` : (isTop || isNear ? `${u.rank}位:${u.name}` : `${u.rank}位:(匿名)`);
       return [nameLabel, timeStr];
     });
 
-    // 5. データセットの更新（色と表示/非表示）
     if (viewType === 'all') {
       analysisChart.data.datasets[0].data = displayData.map(u => u.school);
       analysisChart.data.datasets[1].data = displayData.map(u => u.self);
-      analysisChart.data.datasets[0].hidden = false;
-      analysisChart.data.datasets[1].hidden = false;
+      analysisChart.data.datasets[0].hidden = false; analysisChart.data.datasets[1].hidden = false;
       analysisChart.data.datasets[0].backgroundColor = displayData.map(u => u.name === myName ? '#e67e22' : '#2980b9');
       analysisChart.data.datasets[1].backgroundColor = displayData.map(u => u.name === myName ? '#f39c12' : '#3498db');
     } else if (viewType === 'school') {
       analysisChart.data.datasets[0].data = displayData.map(u => u.school);
       analysisChart.data.datasets[1].data = displayData.map(u => 0);
-      analysisChart.data.datasets[0].hidden = false;
-      analysisChart.data.datasets[1].hidden = true;
+      analysisChart.data.datasets[0].hidden = false; analysisChart.data.datasets[1].hidden = true;
       analysisChart.data.datasets[0].backgroundColor = displayData.map(u => u.name === myName ? '#e67e22' : '#2980b9');
     } else {
       analysisChart.data.datasets[0].data = displayData.map(u => 0);
       analysisChart.data.datasets[1].data = displayData.map(u => u.self);
-      analysisChart.data.datasets[0].hidden = true;
-      analysisChart.data.datasets[1].hidden = false;
+      analysisChart.data.datasets[0].hidden = true; analysisChart.data.datasets[1].hidden = false;
       analysisChart.data.datasets[1].backgroundColor = displayData.map(u => u.name === myName ? '#f39c12' : '#3498db');
     }
 
     analysisChart.update();
   }
 
-  // イベント登録
   document.getElementById('period-select').addEventListener('change', render);
   document.querySelectorAll('input').forEach(el => el.addEventListener('change', render));
 </script>
