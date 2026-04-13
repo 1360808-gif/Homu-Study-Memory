@@ -19,7 +19,6 @@
         .progress-mini-bg { background: #eee; border-radius: 10px; height: 12px; margin-top: 10px; overflow: hidden; }
         .progress-mini-bar { background: linear-gradient(90deg, #f1c40f, #e67e22); height: 100%; transition: width 0.5s; }
 
-        /* 100%達成時のアニメーション */
         .progress-mini-bar.achieved { background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); background-size: 200% 100%; animation: rainbow 2s linear infinite; }
         @keyframes rainbow { 0% { background-position: 200% 0; } 100% { background-position: 0 0; } }
 
@@ -47,7 +46,7 @@
         .btn-add { background: #3498db; }
         .btn-danger { background: #e74c3c; font-size: 12px; padding: 8px; }
         .danger-zone { background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; }
-        input[type="number"], input[type="text"], select { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+        input[type="number"], input[type="text"], select, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -84,7 +83,6 @@
 
     <div class="section">
         <h2>📊 児童別学習データ一覧</h2>
-        
         <div class="filter-panel">
             <div class="filter-row">
                 <div class="filter-label">表示クラス:</div>
@@ -140,11 +138,30 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
         <div class="section">
             <h2>👥 名簿登録</h2>
-            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <div style="margin-bottom: 10px;">
+                <label><input type="radio" name="input-mode" value="single" checked onclick="toggleInputMode()"> 個別</label>
+                <label style="margin-left: 10px;"><input type="radio" name="input-mode" value="bulk" onclick="toggleInputMode()"> 一括(Excel等)</label>
+            </div>
+
+            <div id="single-input-area" style="display:flex; gap:5px; flex-wrap:wrap;">
                 <input type="number" id="st-class" placeholder="組" style="width:40px">
                 <input type="number" id="st-no" placeholder="番" style="width:40px">
                 <input type="text" id="st-name" placeholder="名前" style="flex:1; min-width:80px;">
                 <button class="btn btn-add" onclick="addStudent()">追加</button>
+            </div>
+
+            <div id="bulk-input-area" style="display:none; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <select id="bulk-class-select" style="width: 100px;">
+                        <option value="">組を選択</option>
+                        <option value="1">1組</option>
+                        <option value="2">2組</option>
+                        <option value="3">3組</option>
+                    </select>
+                    <span style="font-size:11px; color:gray;">「番号」「名前」の2列をコピペ</span>
+                </div>
+                <textarea id="bulk-input" rows="5" placeholder="例：&#10;1 田中太郎&#10;2 佐藤花子" style="width:100%;"></textarea>
+                <button class="btn btn-add" onclick="addStudentsBulk()">一括追加実行</button>
             </div>
         </div>
         <div class="section">
@@ -239,27 +256,20 @@
 
         allLogs.forEach(l => {
             const d = new Date(l.date);
-            const total = l.school + l.self;
+            const total = (l.school || 0) + (l.self || 0);
 
-            // 🎉 学年目標ロジック用の集計
-            if (d.getMonth() === thisM && d.getFullYear() === thisY) {
-                gradeThisMonthTotal += total;
-            }
-            if (d.getMonth() === lastM && d.getFullYear() === lastMYear) {
-                gradeLastMonthTotal += total;
-            }
+            if (d.getMonth() === thisM && d.getFullYear() === thisY) gradeThisMonthTotal += total;
+            if (d.getMonth() === lastM && d.getFullYear() === lastMYear) gradeLastMonthTotal += total;
 
-            // テーブル用集計
             const key = nameMapKey(l.name, l.class);
             if(d >= start && stats[key]) {
-                stats[key].school += l.school;
-                stats[key].self += l.self;
+                stats[key].school += (l.school || 0);
+                stats[key].self += (l.self || 0);
                 stats[key].total += total;
                 if(stats[key].lastDate < l.date) stats[key].lastDate = l.date;
             }
         });
 
-        // サマリー表示とAIアドバイスの更新
         const summaryData = updateSummary(gradeThisMonthTotal, gradeLastMonthTotal);
 
         let list = Object.values(stats);
@@ -285,7 +295,6 @@
                 <td>${item.lastDate}</td>
             </tr>`;
         });
-
         updateAI(list, periodF, summaryData);
     };
 
@@ -294,12 +303,8 @@
     function updateSummary(thisMonthTotal, lastMonthTotal) {
         const now = new Date();
         const currentDate = now.getDate();
-        
-        // 🎉 児童側と同じ動的目標ロジック
-        // 10日までは前月実績ベース、それ以降は今月実績ベース
         const baseForTarget = (currentDate <= 10 && lastMonthTotal > 0) ? lastMonthTotal : thisMonthTotal;
         const targetMin = baseForTarget > 0 ? Math.round(baseForTarget * 1.1) : 30000;
-        
         const percent = Math.min(100, Math.round((thisMonthTotal / targetMin) * 100));
         const progressBar = document.getElementById('sm-progress-bar');
         
@@ -309,23 +314,17 @@
         document.getElementById('sm-remain-time').innerText = formatMin(Math.max(0, targetMin - thisMonthTotal));
         document.getElementById('target-label').innerText = `目標：${formatMin(targetMin)} (前月比1.1倍)`;
 
-        // 達成時の虹色演出
         if(percent >= 100) progressBar.classList.add('achieved');
         else progressBar.classList.remove('achieved');
 
-        // 着地予測ロジック
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const dailyAvg = thisMonthTotal / currentDate;
         const predictedTotal = dailyAvg * daysInMonth;
-        
         document.getElementById('sm-pace').innerText = `今月の1日平均：約${Math.round(dailyAvg)}分`;
 
         let predictionText = "分析中...";
-        if (thisMonthTotal >= targetMin) {
-            predictionText = "目標達成！🎉";
-        } else if (dailyAvg > 0) {
-            predictionText = predictedTotal >= targetMin ? "達成見込み" : "ペースアップが必要";
-        }
+        if (thisMonthTotal >= targetMin) predictionText = "目標達成！🎉";
+        else if (dailyAvg > 0) predictionText = predictedTotal >= targetMin ? "達成見込み" : "ペースアップが必要";
         document.getElementById('sm-prediction').innerText = predictionText;
 
         return { dailyAvg, predictedTotal, targetMin, thisMonthTotal };
@@ -334,26 +333,20 @@
     function updateAI(list, period, summary) {
         const pLabel = {all:"全期間", week:"1週間", month:"今月"}[period];
         const activeCount = list.filter(i => i.total > 0).length;
-        
         let report = `【${pLabel}の状況】\n対象児童 ${list.length}名のうち、${activeCount}名が学習を記録しました。\n\n`;
-        report += `🚀 **AI分析：今月の着地予想**\n`;
-        report += `現在のペースを維持すると、今月末には合計 **【${formatMin(Math.round(summary.predictedTotal))}】** に達する見込みです。\n`;
-        
-        if (summary.thisMonthTotal >= summary.targetMin) {
-            report += `🎉 すばらしい！すでに今月の目標を突破しました。`;
-        } else if (summary.predictedTotal >= summary.targetMin) {
-            report += `✅ 順調です。このままの習慣を維持できるよう励ましましょう。`;
-        } else {
-            report += `⚠️ 目標達成にはあと少しペースアップが必要です。特に「じぶん学習」の記録が止まっている児童がいないか確認してください。`;
-        }
-
+        report += `🚀 **AI分析：今月の着地予想**\n現在のペースを維持すると、今月末には合計 **【${formatMin(Math.round(summary.predictedTotal))}】** に達する見込みです。\n`;
+        if (summary.thisMonthTotal >= summary.targetMin) report += `🎉 すばらしい！目標突破！`;
+        else if (summary.predictedTotal >= summary.targetMin) report += `✅ 順調です。維持しましょう。`;
+        else report += `⚠️ ペースアップが必要です。`;
         document.getElementById('ai-report').innerText = report;
         document.getElementById('ai-title').innerText = "✅ AI分析レポート（目標達成予測）";
     }
 
-    window.saveClassSizes = async () => {
-        const d = { "1":Number(document.getElementById('denom-1').value), "2":Number(document.getElementById('denom-2').value), "3":Number(document.getElementById('denom-3').value) };
-        await setDoc(doc(db, "settings", "class_sizes"), d); alert("保存しました");
+    // --- 名簿登録関連 ---
+    window.toggleInputMode = function() {
+        const mode = document.querySelector('input[name="input-mode"]:checked').value;
+        document.getElementById('single-input-area').style.display = (mode === 'single' ? 'flex' : 'none');
+        document.getElementById('bulk-input-area').style.display = (mode === 'bulk' ? 'flex' : 'none');
     };
 
     window.addStudent = async () => {
@@ -361,6 +354,40 @@
         if(!c || !n || !nm) return alert("入力不足");
         await setDoc(doc(db, "students", `s_${c}_${n}`), { class:Number(c), no:Number(n), name:nm });
         location.reload();
+    };
+
+    window.addStudentsBulk = async () => {
+        const classVal = document.getElementById('bulk-class-select').value;
+        const rawInput = document.getElementById('bulk-input').value.trim();
+        if (!classVal) return alert("組を選択してください");
+        if (!rawInput) return alert("データが空です");
+
+        const lines = rawInput.split(/\r?\n/);
+        const studentsToSave = [];
+        for (let line of lines) {
+            const parts = line.split(/[\t\s]+/).map(p => p.trim()).filter(p => p !== "");
+            if (parts.length >= 2) {
+                const no = Number(parts[0]);
+                const name = parts[1];
+                if (!isNaN(no) && name) {
+                    studentsToSave.push({ id: `s_${classVal}_${no}`, data: { class: Number(classVal), no: no, name: name } });
+                }
+            }
+        }
+        if (studentsToSave.length === 0) return alert("データ形式が正しくありません");
+        if (!confirm(`${classVal}組に ${studentsToSave.length} 名を登録しますか？`)) return;
+
+        try {
+            const promises = studentsToSave.map(s => setDoc(doc(db, "students", s.id), s.data));
+            await Promise.all(promises);
+            alert("一括登録完了！");
+            location.reload();
+        } catch (e) { alert("エラーが発生しました"); }
+    };
+
+    window.saveClassSizes = async () => {
+        const d = { "1":Number(document.getElementById('denom-1').value), "2":Number(document.getElementById('denom-2').value), "3":Number(document.getElementById('denom-3').value) };
+        await setDoc(doc(db, "settings", "class_sizes"), d); alert("保存しました");
     };
 
     window.bulkDelete = async (m) => {
