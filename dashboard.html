@@ -61,7 +61,7 @@
   </div>
 
   <div class="section">
-    <h2>👤 あなたの履歴（直近10件）</h2>
+    <h2>👤 あなたの履歴（週ごとの合計）</h2>
     <div class="chart-container"><canvas id="personalChart"></canvas></div>
   </div>
 
@@ -77,7 +77,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import { getFirestore, collection, onSnapshot, query, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  // ※Firebaseの設定は以前のまま変更なし
   const firebaseConfig = {
     apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
     authDomain: "study-app-4215b.firebaseapp.com",
@@ -116,16 +115,17 @@
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
   });
 
+  // ★個人グラフ：週単位で見やすいように「bar（積み上げ）」に変更しています
   const personalCtx = document.getElementById('personalChart').getContext('2d');
   let personalChart = new Chart(personalCtx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: '学校', data:[], borderColor:'#2980b9', fill:false}, {label:'自分', data:[], borderColor:'#c0392b', fill:false}]},
-    options: { responsive: true, maintainAspectRatio: false }
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: '学校', data:[], backgroundColor:'#2980b9'}, {label:'自分', data:[], backgroundColor:'#c0392b'}]},
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
   });
 
   function render() {
     let classTotals = { "1": {s:0, f:0}, "2": {s:0, f:0}, "3": {s:0, f:0} };
-    let myData = { labels: [], s: [], f: [] };
+    let weeklyGroups = {}; // 週集計用オブジェクト
     let grandTotal = 0;
 
     const now = new Date();
@@ -140,14 +140,25 @@
       const totalTime = (log.school + log.self);
 
       if (isMine) {
+        // AI統計用の日単位判定
         if (logDate >= sun) stats.tw += totalTime;
         else if (logDate >= lastSun && logDate < sun) stats.lw += totalTime;
         if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) stats.tm += totalTime;
         else if (logDate.getMonth() === lastM) stats.lm += totalTime;
 
-        myData.labels.push(log.date);
-        myData.s.push(log.school);
-        myData.f.push(log.self);
+        // ★週ラベルの作成ロジック（月曜〜日曜）
+        const d = new Date(log.date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        const mon = new Date(d.setDate(diff));
+        const sdy = new Date(mon); sdy.setDate(mon.getDate() + 6);
+        const label = `${mon.getMonth()+1}/${mon.getDate()} - ${sdy.getMonth()+1}/${sdy.getDate()}`;
+
+        if(!weeklyGroups[label]) {
+            weeklyGroups[label] = { s: 0, f: 0, sortKey: mon.getTime() };
+        }
+        weeklyGroups[label].s += log.school;
+        weeklyGroups[label].f += log.self;
       }
 
       if (classTotals[log.class]) {
@@ -157,33 +168,40 @@
       grandTotal += totalTime;
     });
 
+    // 学年合計プログレスバー
     const target = 30000;
     const percent = Math.min(100, Math.round((grandTotal / target) * 100));
     document.getElementById('progress-bar').style.width = percent + '%';
     document.getElementById('progress-bar').innerText = percent + '%';
     document.getElementById('goal-text').innerText = `学年合計: ${grandTotal}分 (目標まであと ${Math.max(0, target - grandTotal)}分)`;
 
+    // クラスチャート更新
     classChart.data.datasets[0].data = [classTotals["1"].s/denoms["1"], classTotals["2"].s/denoms["2"], classTotals["3"].s/denoms["3"]];
     classChart.data.datasets[1].data = [classTotals["1"].f/denoms["1"], classTotals["2"].f/denoms["2"], classTotals["3"].f/denoms["3"]];
     classChart.update();
 
-    personalChart.data.labels = myData.labels.slice(-10);
-    personalChart.data.datasets[0].data = myData.s.slice(-10);
-    personalChart.data.datasets[1].data = myData.f.slice(-10);
+    // ★個人チャート更新（直近5週間を表示）
+    const sortedWeekLabels = Object.keys(weeklyGroups).sort((a,b) => weeklyGroups[a].sortKey - weeklyGroups[b].sortKey);
+    const displayWeeks = sortedWeekLabels.slice(-5);
+    
+    personalChart.data.labels = displayWeeks;
+    personalChart.data.datasets[0].data = displayWeeks.map(w => weeklyGroups[w].s);
+    personalChart.data.datasets[1].data = displayWeeks.map(w => weeklyGroups[w].f);
     personalChart.update();
 
-    updateAIAdvice(stats, myData);
+    // AIアドバイス（myDataの代わりに統計を渡す）
+    updateAIAdvice(stats, cachedLogs.filter(l => l.name === myName));
   }
 
-  function updateAIAdvice(stats, myData) {
+  function updateAIAdvice(stats, myLogs) {
     const aiText = document.getElementById('ai-comment');
     const aiStats = document.getElementById('ai-stats');
     const aiIcon = document.getElementById('ai-icon');
     const userTitle = document.getElementById('user-title');
 
     let title = "かけだしの学習者";
-    if (myData.s.length > 10) title = "きろくの達人";
-    const totalS = myData.s.reduce((a,b)=>a+b,0), totalF = myData.f.reduce((a,b)=>a+b,0);
+    if (myLogs.length > 10) title = "きろくの達人";
+    const totalS = myLogs.reduce((a,b)=>a+b.school,0), totalF = myLogs.reduce((a,b)=>a+b.self,0);
     if (totalF > totalS * 1.5) title = "じしゅうの鬼";
     userTitle.innerText = title;
 
