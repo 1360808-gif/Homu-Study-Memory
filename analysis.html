@@ -15,7 +15,7 @@
   h2 { font-size: 18px; color: #2c3e50; border-left: 5px solid #3498db; padding-left: 10px; text-align: left; margin-bottom: 15px; }
   .chart-wrapper { width: 100%; overflow-x: auto; margin-bottom: 10px; border-radius: 8px; background: #fdfdfd; }
   .chart-container { position: relative; height: 420px; min-width: 750px; padding: 10px; }
-  .note { font-size: 12px; color: #666; background: #e8f4f8; padding: 10px; border-radius: 8px; text-align: left; margin-top: 10px; line-height: 1.5; }
+  .note { font-size: 12px; color: #666; background: #e8f4f8; padding: 10px; border-radius: 8px; text-align: left; margin-top: 10px; line-height: 1.5; min-height: 1.5em; }
   button.nav-btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; background-color: #3498db; border: none; border-radius: 12px; cursor: pointer; }
 </style>
 </head>
@@ -58,8 +58,8 @@
         <canvas id="analysisChart"></canvas>
       </div>
     </div>
-    <div class="note">
-        💡 <strong>⭐️があなたです。</strong> 前に3人、後ろに3人の友達が表示されています！
+    <div class="note" id="note-text">
+        読み込み中...
     </div>
   </div>
 
@@ -116,13 +116,14 @@
     const displayMode = document.querySelector('input[name="displayMode"]:checked').value;
     const viewType = document.querySelector('input[name="viewType"]:checked').value;
     const period = document.getElementById('period-select').value;
+    const noteEl = document.getElementById('note-text');
     const now = new Date();
 
     const isTarget = (dateStr) => {
       const d = new Date(dateStr);
       const m = d.getMonth() + 1;
       if (period === 'total') return true;
-      if (period === 'this-month') return d.getMonth() === now.getMonth();
+      if (period === 'this-month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       if (period === 'this-week') {
         const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
         return d >= sun;
@@ -162,6 +163,8 @@
 
     if (displayMode === 'top20') {
       document.getElementById('chart-title').innerText = "🏆 TOP20とあなたの比較";
+      noteEl.innerHTML = "💡 <strong>⭐️があなたです。</strong> 学年のTOP20と自分の位置をくらべてみよう！";
+      
       if (myIndex !== -1) {
         const others = allUsers.filter(u => u.name !== myName).slice(0, 19);
         displayData = [myData, ...others];
@@ -170,8 +173,9 @@
       }
     } else {
       document.getElementById('chart-title').innerText = "🤝 じぶんのまわり（前後3名）";
+      noteEl.innerHTML = "💡 <strong>⭐️があなたです。</strong> 自分の前後にいる3人ずつの友達と、はげまし合ってがんばろう！";
+      
       if (myIndex !== -1) {
-        // 【修正箇所】開始を-3、終了を+4にすることで、自分を含めて計7人にする
         const start = Math.max(0, myIndex - 3);
         const end = Math.min(allUsers.length, myIndex + 4);
         displayData = allUsers.slice(start, end);
