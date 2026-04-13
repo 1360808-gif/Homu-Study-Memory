@@ -26,6 +26,10 @@
   .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; position: relative; overflow: hidden; }
   .progress-bar { background: linear-gradient(90deg, #f1c40f, #f39c12); height: 100%; width: 0%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; transition: width 0.5s ease; }
   .chart-container { position: relative; height: 250px; width: 100%; }
+
+  /* 学年AIコメント用のスタイル追加 */
+  .grade-ai-box { margin-top: 12px; padding: 10px; background: #fff9e6; border-radius: 10px; border-left: 4px solid #f39c12; text-align: left; font-size: 13px; color: #5d4037; line-height: 1.4; }
+  .grade-ai-label { font-size: 11px; color: #e67e22; font-weight: bold; display: block; margin-bottom: 2px; }
 </style>
 </head>
 <body>
@@ -49,8 +53,12 @@
 
   <div class="section">
     <h2>🤝 みんなの合計（学年目標）</h2>
-    <p id="goal-text" style="font-weight:bold; color:#e67e22; margin-bottom:10px;">目標: 500時間</p>
+    <p id="goal-text" style="font-weight:bold; color:#e67e22; margin-bottom:10px;">目標: 計算中...</p>
     <div class="progress-bg"><div class="progress-bar" id="progress-bar">0%</div></div>
+    <div class="grade-ai-box">
+      <span class="grade-ai-label">🤖 学年分析AIアドバイス</span>
+      <div id="grade-ai-comment">データを分析しています...</div>
+    </div>
   </div>
 
   <div class="section">
@@ -129,6 +137,7 @@
     let classTotals = { "1": {s:0, f:0}, "2": {s:0, f:0}, "3": {s:0, f:0} };
     let weeklyGroups = {}; 
     let grandTotal = 0;
+    let gradeThisMonthTotal = 0;
 
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
@@ -142,6 +151,11 @@
       const isMine = log.name === myName;
       const logDate = new Date(log.date);
       const totalTime = (log.school + log.self);
+
+      // 学年今月合計の集計
+      if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) {
+        gradeThisMonthTotal += totalTime;
+      }
 
       if (isMine) {
         if (logDate >= sun) stats.tw += totalTime;
@@ -170,21 +184,39 @@
       grandTotal += totalTime;
     });
 
-    // 【修正箇所】みんなの合計（学年目標）を時間表記に
-    const target = 30000;
-    const percent = Math.min(100, Math.round((grandTotal / target) * 100));
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-bar').innerText = percent + '%';
-    
-    const grandTotalStr = formatMinutes(grandTotal);
-    const remainMin = Math.max(0, target - grandTotal);
-    const remainStr = formatMinutes(remainMin);
-    document.getElementById('goal-text').innerText = `学年合計: ${grandTotalStr} (目標まであと ${remainStr})`;
+    // --- 学年目標メーター・コメントの更新 ---
+    const currentMonth = now.getMonth() + 1;
+    let percent, goalLabel, gradeAiText;
 
+    if (currentMonth === 4) {
+      // 4月：蓄積モード（100%を仮に500時間としてバーのみ動かす）
+      const maxView = 30000;
+      percent = Math.min(100, Math.round((gradeThisMonthTotal / maxView) * 100));
+      goalLabel = `4月の学年合計: ${formatMinutes(gradeThisMonthTotal)}`;
+      document.getElementById('progress-bar').innerText = "蓄積中";
+      gradeAiText = "今はみんなの学習パワーを貯めている期間だよ！4月の最後にみんなの実績を集計して、5月の目標をAIが決めるからね。";
+    } else {
+      // 5月以降：目標モード（今月の1.1倍を目標に）
+      const dynamicTarget = gradeThisMonthTotal > 0 ? Math.round(gradeThisMonthTotal * 1.1) : 30000;
+      percent = Math.min(100, Math.round((gradeThisMonthTotal / dynamicTarget) * 100));
+      goalLabel = `今月の学年合計: ${formatMinutes(gradeThisMonthTotal)} / 目標: ${formatMinutes(dynamicTarget)}`;
+      document.getElementById('progress-bar').innerText = percent + '%';
+      
+      if (percent >= 100) gradeAiText = "目標達成おめでとう！みんなの力が合わさって、素晴らしい結果になったよ！";
+      else if (percent >= 70) gradeAiText = "目標まであと少し！みんなの「ちょっとした頑張り」が集まれば必ず届くよ！";
+      else gradeAiText = "今月もみんなでコツコツ積み上げているね。AIと一緒に目標達成を目指そう！";
+    }
+
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('goal-text').innerText = goalLabel;
+    document.getElementById('grade-ai-comment').innerText = gradeAiText;
+
+    // クラスチャート更新
     classChart.data.datasets[0].data = [classTotals["1"].s/denoms["1"], classTotals["2"].s/denoms["2"], classTotals["3"].s/denoms["3"]];
     classChart.data.datasets[1].data = [classTotals["1"].f/denoms["1"], classTotals["2"].f/denoms["2"], classTotals["3"].f/denoms["3"]];
     classChart.update();
 
+    // 個人チャート更新
     const sortedWeekLabels = Object.keys(weeklyGroups).sort((a,b) => weeklyGroups[a].sortKey - weeklyGroups[b].sortKey);
     const displayWeeks = sortedWeekLabels.slice(-5);
     personalChart.data.labels = displayWeeks;
@@ -201,6 +233,7 @@
     const aiIcon = document.getElementById('ai-icon');
     const userTitle = document.getElementById('user-title');
 
+    // 称号設定
     let title = "かけだしの学習者";
     if (myLogs.length > 10) title = "きろくの達人";
     const totalS = myLogs.reduce((a,b)=>a+b.school,0), totalF = myLogs.reduce((a,b)=>a+b.self,0);
@@ -216,15 +249,23 @@
       compB = stats.llw; labelB = "先々週";
     }
 
+    let personalMsg = "";
     if (compA > compB && compB > 0) {
-      aiText.innerText = `${labelA}は${labelB}よりペースが上がっているよ！その調子！`; aiIcon.innerText = "🔥";
+      personalMsg = `${labelA}は${labelB}よりペースが上がっているよ！その調子！`; aiIcon.innerText = "🔥";
     } else if (compA < compB && compA > 0) {
-      aiText.innerText = `${labelA}は${labelB}よりのんびりペースかな？ここから取り返そう！`; aiIcon.innerText = "🐢";
+      personalMsg = `${labelA}は${labelB}よりのんびりペースかな？ここから取り返そう！`; aiIcon.innerText = "🐢";
     } else {
-      aiText.innerText = "きみの頑張りをしっかり見守っているよ！"; aiIcon.innerText = "🤖";
+      personalMsg = "きみの頑張りをしっかり見守っているよ！"; aiIcon.innerText = "🤖";
     }
 
-    aiStats.innerHTML = `${labelA}:${formatMinutes(compA)} (${labelB}:${formatMinutes(compB)}) / 今月:${formatMinutes(stats.tm)} (先月:${formatMinutes(stats.lm)})`;
+    // 4月限定の予告メッセージを追加
+    const now = new Date();
+    if (now.getMonth() + 1 === 4) {
+      personalMsg += "\n5月からは「学年目標」もAIが分析して教えてくれるよ。お楽しみに！";
+    }
+
+    aiText.innerText = personalMsg;
+    aiStats.innerHTML = `${labelA}:${formatMinutes(compA)} (${labelB}:${formatMinutes(compB)}) / あなたの今月合計:${formatMinutes(stats.tm)}`;
   }
 
   window.goToInput = () => location.href = `input.html${window.location.search}`;
