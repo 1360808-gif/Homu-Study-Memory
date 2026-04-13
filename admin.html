@@ -3,86 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理者画面 - データ整理</title>
+    <title>管理者総合分析画面</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; margin: 0; }
-        .container { background: white; max-width: 650px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .section { border-bottom: 2px solid #eee; padding-bottom: 25px; margin-bottom: 25px; text-align: left; }
-        h1 { font-size: 22px; color: #2c3e50; }
-        h2 { font-size: 18px; color: #d35400; margin-bottom: 15px; border-left: 5px solid #d35400; padding-left: 10px; }
+        body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; color: #333; }
+        .container { background: white; max-width: 900px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 40px; padding: 20px; border: 1px solid #e1e8ed; border-radius: 15px; background: #fff; }
+        h1 { text-align: center; color: #2c3e50; font-size: 24px; }
+        h2 { font-size: 18px; color: #d35400; border-left: 5px solid #d35400; padding-left: 10px; margin-bottom: 20px; }
         
-        .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        /* AI分析エリア */
+        .ai-analysis-box { background: linear-gradient(135deg, #e3f2fd, #ffffff); border: 2px solid #2196f3; border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .ai-title { font-weight: bold; color: #1976d2; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .ai-report { font-size: 14px; line-height: 1.6; color: #34495e; white-space: pre-wrap; }
+
+        /* テーブルスタイル */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; color: #7f8c8d; }
+        .stats-badge { padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 12px; }
+        .badge-school { background: #e3f2fd; color: #1976d2; }
+        .badge-self { background: #fff3e0; color: #e65100; }
+
+        .form-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-save { background: #27ae60; }
+        .btn-add { background: #3498db; }
+        .btn-danger { background: #e74c3c; width: 100%; margin-top: 10px; }
         
-        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-add { background-color: #3498db; }
-        .btn-save { background-color: #27ae60; width: 100%; margin-top: 10px; }
-        .btn-delete { background-color: #e74c3c; font-size: 11px; padding: 4px 8px; }
-        
-        /* 危険エリアのスタイル */
-        .danger-zone { background-color: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; margin-top: 20px; }
-        .btn-danger { background-color: #c0392b; width: 100%; padding: 12px; margin-top: 10px; font-size: 14px; }
-        .btn-danger:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        
-        #student-list, #log-list { margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 10px; background: #fafafa; font-size: 13px; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .danger-zone { background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚙️ 管理者総合管理</h1>
+    <h1>👨‍🏫 学級管理者ダッシュボード</h1>
 
     <div class="section">
-        <h2>👥 クラス平均用の人数設定</h2>
+        <h2>🤖 AI学級分析レポート</h2>
+        <div class="ai-analysis-box" id="ai-box">
+            <div class="ai-title"><span>🔍</span> AIがデータを分析中...</div>
+            <div class="ai-report" id="ai-report">学習ログを読み込んでいます。少々お待ちください。</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 児童別・学習状況スコア</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table id="student-stats-table">
+                <thead>
+                    <tr>
+                        <th>クラス</th>
+                        <th>名前</th>
+                        <th>合計時間</th>
+                        <th>学校内</th>
+                        <th>じぶん学習</th>
+                        <th>最終記録日</th>
+                    </tr>
+                </thead>
+                <tbody id="student-stats-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>👥 基本設定（人数・名簿）</h2>
         <div class="form-row">
-            1組: <input type="number" id="denom-1" style="width:50px">人 / 
-            2組: <input type="number" id="denom-2" style="width:50px">人 / 
+            1組: <input type="number" id="denom-1" style="width:50px">人 
+            2組: <input type="number" id="denom-2" style="width:50px">人 
             3組: <input type="number" id="denom-3" style="width:50px">人
+            <button class="btn btn-save" onclick="saveClassSizes()">人数保存</button>
         </div>
-        <button class="btn btn-save" onclick="saveClassSizes()">人数設定を保存</button>
-    </div>
-
-    <div class="section">
-        <h2>👤 児童の登録</h2>
         <div class="form-row">
-            <input type="number" id="st-class" placeholder="組" style="width:50px">
-            <input type="number" id="st-no" placeholder="番号" style="width:60px">
+            <input type="number" id="st-class" placeholder="組" style="width:40px">
+            <input type="number" id="st-no" placeholder="番" style="width:40px">
             <input type="text" id="st-name" placeholder="名前" style="flex:1">
-            <button class="btn btn-add" onclick="addStudent()">追加</button>
+            <button class="btn btn-add" onclick="addStudent()">児童追加</button>
         </div>
-        <div id="student-list">名簿を読み込み中...</div>
-    </div>
-
-    <div class="section">
-        <h2>📝 学習ログの履歴・個別削除</h2>
-        <div id="log-list">ログを読み込み中...</div>
     </div>
 
     <div class="section danger-zone">
-        <h2>⚠️ データの管理（削除・リセット）</h2>
-        
-        <div style="margin-bottom: 25px; border-bottom: 1px dashed #feb2b2; padding-bottom: 15px;">
-            <p style="font-size:13px; font-weight:bold; color:#c0392b; margin:0;">① 学習きろく（グラフ用データ）だけ全削除</p>
-            <p style="font-size:11px; color:#555; margin:5px 0;">※名簿（なまえ）は残ります。新学期や月替わりのリセットに。</p>
-            <label style="font-size:12px;"><input type="checkbox" id="check-log-only" onchange="toggleDanger('log')"> ログのみ削除に同意する</label>
-            <button id="btn-delete-log" class="btn btn-danger" disabled onclick="bulkDelete('learning_logs')">学習ログをすべて消去</button>
-        </div>
-
-        <div>
-            <p style="font-size:13px; font-weight:bold; color:#c0392b; margin:0;">② 【完全初期化】名簿もログもすべて削除</p>
-            <p style="font-size:11px; color:#555; margin:5px 0;">※名簿も消えます。来年度など完全に新しくする時に。</p>
-            <label style="font-size:12px;"><input type="checkbox" id="check-all" onchange="toggleDanger('all')"> すべてのデータを削除することに同意する</label>
-            <button id="btn-delete-all" class="btn btn-danger" disabled onclick="bulkDelete('all')">全データを完全に消去（リセット）</button>
-        </div>
+        <h2>⚠️ データの初期化</h2>
+        <label><input type="checkbox" id="check-log"> 学習ログのみ削除</label>
+        <button class="btn btn-danger" onclick="bulkDelete('learning_logs')" id="del-log" style="padding:5px; font-size:12px;">実行</button>
+        <br><br>
+        <label><input type="checkbox" id="check-all"> 名簿も含む全データ削除</label>
+        <button class="btn btn-danger" onclick="bulkDelete('all')" id="del-all" style="padding:5px; font-size:12px;">実行</button>
     </div>
 
-    <button style="border:none; background:none; text-decoration:underline; color:#7f8c8d; margin-top:20px; cursor:pointer;" onclick="location.href='index.html'">ログイン画面へ戻る</button>
+    <button style="width:100%; background:none; border:none; color:gray; text-decoration:underline; cursor:pointer;" onclick="location.href='index.html'">ログイン画面へ</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -96,77 +110,114 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 人数設定読み込み
-    async function loadClassSizes() {
-        const docSnap = await getDoc(doc(db, "settings", "class_sizes"));
-        if (docSnap.exists()) {
-            const d = docSnap.data();
-            document.getElementById('denom-1').value = d["1"]||30;
-            document.getElementById('denom-2').value = d["2"]||30;
-            document.getElementById('denom-3').value = d["3"]||30;
+    async function initAdmin() {
+        const students = await fetchColl("students");
+        const logs = await fetchColl("learning_logs");
+        const sizes = await getDoc(doc(db, "settings", "class_sizes"));
+        
+        if(sizes.exists()){
+            const d = sizes.data();
+            document.getElementById('denom-1').value = d["1"];
+            document.getElementById('denom-2').value = d["2"];
+            document.getElementById('denom-3').value = d["3"];
         }
+
+        analyzeData(students, logs);
     }
-    window.saveClassSizes = async () => {
-        await setDoc(doc(db, "settings", "class_sizes"), {
-            "1": Number(document.getElementById('denom-1').value), "2": Number(document.getElementById('denom-2').value), "3": Number(document.getElementById('denom-3').value)
+
+    async function fetchColl(name) {
+        const snap = await getDocs(collection(db, name));
+        let arr = [];
+        snap.forEach(d => arr.push({id: d.id, ...d.data()}));
+        return arr;
+    }
+
+    function analyzeData(students, logs) {
+        let stats = {};
+        students.forEach(s => {
+            stats[s.name] = { class: s.class, school: 0, self: 0, lastDate: "-" };
         });
-        alert("人数を保存しました");
+
+        logs.forEach(l => {
+            if(stats[l.name]) {
+                stats[l.name].school += l.school;
+                stats[l.name].self += l.self;
+                if(stats[l.name].lastDate < l.date) stats[l.name].lastDate = l.date;
+            }
+        });
+
+        // テーブル描画
+        const tbody = document.getElementById('student-stats-body');
+        tbody.innerHTML = "";
+        let totalSelf = 0, totalSchool = 0;
+        let activeUsers = 0;
+
+        Object.keys(stats).forEach(name => {
+            const s = stats[name];
+            totalSelf += s.self; totalSchool += s.school;
+            if(s.school + s.self > 0) activeUsers++;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${s.class}組</td>
+                    <td><strong>${name}</strong></td>
+                    <td>${s.school + s.self}分</td>
+                    <td><span class="stats-badge badge-school">${s.school}分</span></td>
+                    <td><span class="stats-badge badge-self">${s.self}分</span></td>
+                    <td>${s.lastDate}</td>
+                </tr>
+            `;
+        });
+
+        // AI分析レポート生成
+        const aiReport = document.getElementById('ai-report');
+        const selfRate = Math.round((totalSelf / (totalSelf + totalSchool || 1)) * 100);
+        
+        let advice = `【学級概況】\n現在、名簿登録者のうち ${activeUsers}名 が学習を記録しています。\n学級全体の「じぶん学習」の割合は ${selfRate}% です。\n\n`;
+        
+        // 特徴的な児童の抽出
+        let masters = Object.keys(stats).filter(n => stats[n].self > 500);
+        if(masters.length > 0) advice += `✨【絶好調】じぶん学習が500分を超えている児童が ${masters.length}名 います。称賛の声をかけてあげてください。\n`;
+        
+        let sleeping = Object.keys(stats).filter(n => stats[n].lastDate === "-" && activeUsers > 0);
+        if(sleeping.length > 0) advice += `⚠️【要フォロー】まだ一度も記録していない児童が ${sleeping.length}名 います。入力の仕方を再確認すると良いかもしれません。\n`;
+
+        advice += `\n💡【先生への提言】\n自学率が${selfRate < 30 ? "低めです。家庭での「じぶん学習」のネタを共有する時間を設けてみてはどうでしょうか？" : "順調です！自立した学習者が育っています。"}`;
+        
+        aiReport.innerText = advice;
+        document.querySelector('.ai-title').innerText = "✅ AI分析レポートが完了しました";
+    }
+
+    // --- 各種操作関数 ---
+    window.saveClassSizes = async () => {
+        const d = { "1": Number(document.getElementById('denom-1').value), "2": Number(document.getElementById('denom-2').value), "3": Number(document.getElementById('denom-3').value) };
+        await setDoc(doc(db, "settings", "class_sizes"), d); alert("保存完了");
     };
 
-    // 名簿読み込み・追加
-    async function loadStudents() {
-        const querySnapshot = await getDocs(query(collection(db, "students"), orderBy("class"), orderBy("no")));
-        let html = "";
-        querySnapshot.forEach(d => {
-            const s = d.data();
-            html += `<div class="list-item"><span>${s.class}組 ${s.no}番 ${s.name}</span></div>`;
-        });
-        document.getElementById('student-list').innerHTML = html || "登録なし";
-    }
     window.addStudent = async () => {
         const c = document.getElementById('st-class').value, n = document.getElementById('st-no').value, nm = document.getElementById('st-name').value;
         if(!c || !n || !nm) return;
         await setDoc(doc(db, "students", `s_${c}_${n}`), { class:Number(c), no:Number(n), name:nm });
-        loadStudents();
-    };
-
-    // ログ履歴読み込み・個別削除
-    async function loadLogs() {
-        const q = query(collection(db, "learning_logs"), orderBy("timestamp", "desc"), limit(50));
-        const querySnapshot = await getDocs(q);
-        let html = "";
-        querySnapshot.forEach(d => {
-            const log = d.data();
-            html += `<div class="list-item"><span>${log.date} ${log.name} (${log.school+log.self}分)</span><button class="btn btn-delete" onclick="deleteLog('${d.id}')">消す</button></div>`;
-        });
-        document.getElementById('log-list').innerHTML = html || "履歴なし";
-    }
-    window.deleteLog = async (id) => { if(confirm("削除しますか？")) { await deleteDoc(doc(db, "learning_logs", id)); loadLogs(); } };
-
-    // ボタン有効化
-    window.toggleDanger = (type) => {
-        if(type === 'log') document.getElementById('btn-delete-log').disabled = !document.getElementById('check-log-only').checked;
-        if(type === 'all') document.getElementById('btn-delete-all').disabled = !document.getElementById('check-all').checked;
-    };
-
-    // 一括削除処理
-    window.bulkDelete = async (target) => {
-        const confirmMsg = target === 'all' ? "【超注意】名簿も含めすべて削除します。よろしいですか？" : "【確認】すべての学習データを削除します（名簿は残ります）。よろしいですか？";
-        if(!confirm(confirmMsg)) return;
-
-        const targetColls = target === 'all' ? ['learning_logs', 'students'] : ['learning_logs'];
-        
-        for (const collName of targetColls) {
-            const snapshot = await getDocs(collection(db, collName));
-            for (const d of snapshot.docs) {
-                await deleteDoc(doc(db, collName, d.id));
-            }
-        }
-        alert("削除が完了しました。");
         location.reload();
     };
 
-    loadClassSizes(); loadStudents(); loadLogs();
+    window.bulkDelete = async (mode) => {
+        const check = mode === 'all' ? 'check-all' : 'check-log';
+        if(!document.getElementById(check).checked) { alert("チェックボックスにチェックを入れてください"); return; }
+        if(!confirm("本当に削除しますか？")) return;
+
+        if(mode === 'all' || mode === 'learning_logs') {
+            const snap = await getDocs(collection(db, "learning_logs"));
+            for(const d of snap.docs) await deleteDoc(doc(db, "learning_logs", d.id));
+        }
+        if(mode === 'all') {
+            const snap = await getDocs(collection(db, "students"));
+            for(const d of snap.docs) await deleteDoc(doc(db, "students", d.id));
+        }
+        alert("削除完了"); location.reload();
+    };
+
+    initAdmin();
 </script>
 </body>
 </html>
