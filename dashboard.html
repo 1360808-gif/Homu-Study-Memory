@@ -5,26 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>学習ダッシュボード</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
   body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
-  .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+  .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; position: relative; overflow: hidden; }
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 5px; }
   h2 { font-size: 18px; color: #34495e; margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
   
   .title-badge { background: #6c5ce7; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; display: inline-block; margin-top: 10px; }
   
-  .ai-message-area { background: linear-gradient(135deg, #e0f7fa, #ffffff); border: 2px solid #4fc3f7; border-radius: 15px; padding: 15px; margin: 15px 0 10px 0; display: flex; align-items: center; gap: 15px; text-align: left; }
+  .ai-message-area { background: linear-gradient(135deg, #e0f7fa, #ffffff); border: 2px solid #4fc3f7; border-radius: 15px; padding: 15px; margin: 15px 0 10px 0; display: flex; align-items: center; gap: 15px; text-align: left; z-index: 10; position: relative; }
   .ai-icon { font-size: 40px; }
   .ai-text { font-size: 14px; font-weight: bold; color: #0277bd; line-height: 1.4; }
   .ai-stats { font-size: 11px; color: #546e7a; margin-top: 5px; }
 
-  .button-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px 0; }
+  .button-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px 0; z-index: 10; position: relative; }
   .btn-record { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3); }
   .btn-analysis { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #3498db, #2980b9); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); }
 
-  .section { background-color: #fdfdfd; border: 1px solid #ecf0f1; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
+  .section { background-color: #fdfdfd; border: 1px solid #ecf0f1; border-radius: 15px; padding: 15px; margin-bottom: 25px; z-index: 10; position: relative; }
   .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; position: relative; overflow: hidden; }
   .progress-bar { background: linear-gradient(90deg, #f1c40f, #f39c12); height: 100%; width: 0%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; transition: width 0.5s ease; }
+  
+  /* 達成時の虹色アニメーションCSSを追加 */
+  .progress-bar.achieved { background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); background-size: 200% 100%; animation: rainbow 2s linear infinite; }
+  @keyframes rainbow { 0% { background-position: 200% 0; } 100% { background-position: 0 0; } }
+
   .chart-container { position: relative; height: 250px; width: 100%; }
 
   .grade-ai-box { margin-top: 12px; padding: 10px; background: #fff9e6; border-radius: 10px; border-left: 4px solid #f39c12; text-align: left; font-size: 13px; color: #5d4037; line-height: 1.4; }
@@ -99,6 +105,7 @@
 
   let cachedLogs = [];
   let denoms = { "1": 30, "2": 30, "3": 30 };
+  let hasFiredConfetti = false; // 紙吹雪が飛んだかのフラグ
 
   onSnapshot(doc(db, "settings", "class_sizes"), (docSnap) => {
     if (docSnap.exists()) { denoms = docSnap.data(); render(); }
@@ -132,12 +139,40 @@
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
   });
 
+  // 🎉 派手な紙吹雪を飛ばす関数
+  function fireConfetti() {
+    if (hasFiredConfetti) return; // すでに飛んでいたら何もしない
+    hasFiredConfetti = true;
+
+    // 中央からドカン
+    confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, zIndex: 1000 });
+    
+    // 左右から追撃（少し遅らせて）
+    setTimeout(() => { confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 }, zIndex: 1000 }); }, 250);
+    setTimeout(() => { confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 }, zIndex: 1000 }); }, 400);
+    
+    // 花火（さらに遅らせて）
+    setTimeout(() => {
+        var duration = 3 * 1000;
+        var animationEnd = Date.now() + duration;
+        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+        var interval = setInterval(function() {
+            var timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) { return clearInterval(interval); }
+            var particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+    }, 1000);
+  }
+
   function render() {
     let classTotals = { "1": {s:0, f:0}, "2": {s:0, f:0}, "3": {s:0, f:0} };
     let weeklyGroups = {}; 
     let grandTotal = 0;
     let gradeThisMonthTotal = 0;
-    let gradeLastMonthTotal = 0; // 先月の学年合計用
+    let gradeLastMonthTotal = 0;
 
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
@@ -155,11 +190,9 @@
       const logDate = new Date(log.date);
       const totalTime = (log.school + log.self);
 
-      // 今月の学年合計
       if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) {
         gradeThisMonthTotal += totalTime;
       }
-      // 先月の学年合計
       if (logDate.getMonth() === lastM && logDate.getFullYear() === lastMYear) {
         gradeLastMonthTotal += totalTime;
       }
@@ -194,34 +227,43 @@
     const currentMonth = now.getMonth() + 1;
     const currentDate = now.getDate();
     let percent, goalLabel, gradeAiText;
+    const progressBar = document.getElementById('progress-bar');
 
     if (currentMonth === 4) {
       const maxView = 30000;
       percent = Math.min(100, Math.round((gradeThisMonthTotal / maxView) * 100));
       goalLabel = `4月の学年合計: ${formatMinutes(gradeThisMonthTotal)}`;
-      document.getElementById('progress-bar').innerText = "蓄積中";
+      progressBar.innerText = "蓄積中";
+      progressBar.classList.remove('achieved'); // 虹色解除
       gradeAiText = "今はみんなの学習パワーを貯めている期間だよ！4月の最後にみんなの実績を集計して、5月の目標が決まるよ。";
     } else {
-      // 目標値：先月の実績が0なら30000分、あればその1.1倍を目標にする
       const baseForTarget = (currentDate <= 10 && gradeLastMonthTotal > 0) ? gradeLastMonthTotal : gradeThisMonthTotal;
       const dynamicTarget = baseForTarget > 0 ? Math.round(baseForTarget * 1.1) : 30000;
       
       percent = Math.min(100, Math.round((gradeThisMonthTotal / dynamicTarget) * 100));
       goalLabel = `今月の学年合計: ${formatMinutes(gradeThisMonthTotal)} / 目標: ${formatMinutes(dynamicTarget)}`;
-      document.getElementById('progress-bar').innerText = percent + '%';
+      progressBar.innerText = percent + '%';
       
-      // 10日間の猶予期間メッセージ
       if (currentDate <= 10) {
         const lastMonthName = lastM + 1;
+        progressBar.classList.remove('achieved'); // 猶予期間は虹色にしない
         gradeAiText = `${lastMonthName}月はお疲れ様！学年合計は${formatMinutes(gradeLastMonthTotal)}だったよ。すごいね！\n今月（${currentMonth}月）の目安は${formatMinutes(dynamicTarget)}だよ。ぼくと一緒にまた積み上げていこう！`;
       } else {
-        if (percent >= 100) gradeAiText = "目標達成おめでとう！みんなの力が合わさって、最高の結果になったね！";
-        else if (percent >= 70) gradeAiText = "目標まであと少し！みんなの「ちょっとした頑張り」が集まれば必ず届くよ！";
-        else gradeAiText = "今月もみんなでコツコツ積み上げているね。ぼくも一緒に応援しているよ！";
+        if (percent >= 100) {
+          // 🎉 目標達成！
+          progressBar.classList.add('achieved'); // 虹色に光らせる
+          gradeAiText = "目標達成おめでとう！みんなの力が合わさって、最高の結果になったね！🎉";
+          fireConfetti(); // 紙吹雪ドカーン
+        } else {
+          progressBar.classList.remove('achieved'); // 通常色
+          hasFiredConfetti = false; // フラグリセット
+          if (percent >= 70) gradeAiText = "目標まであと少し！みんなの「ちょっとした頑張り」が集まれば必ず届くよ！";
+          else gradeAiText = "今月もみんなでコツコツ積み上げているね。ぼくも一緒に応援しているよ！";
+        }
       }
     }
 
-    document.getElementById('progress-bar').style.width = percent + '%';
+    progressBar.style.width = percent + '%';
     document.getElementById('goal-text').innerText = goalLabel;
     document.getElementById('grade-ai-comment').innerText = gradeAiText;
 
