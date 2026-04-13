@@ -44,6 +44,9 @@
         .btn-save { background: #27ae60; }
         .btn-add { background: #3498db; }
         .btn-danger { background: #e74c3c; font-size: 12px; padding: 8px; }
+        .btn-reset { background: #95a5a6; font-size: 10px; padding: 5px 8px; }
+        .btn-reset:hover { background: #7f8c8d; }
+
         .danger-zone { background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; margin-top: 20px; }
         input[type="number"], input[type="text"], select, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
     </style>
@@ -109,7 +112,7 @@
         <div class="table-container">
             <table>
                 <thead>
-                    <tr><th>番号</th><th>名前</th><th>期間合計</th><th>学校内</th><th>じぶん</th><th>最終記録</th></tr>
+                    <tr><th>番号</th><th>名前</th><th>期間合計</th><th>学校内</th><th>じぶん</th><th>最終記録</th><th>操作</th></tr>
                 </thead>
                 <tbody id="student-stats-body"></tbody>
             </table>
@@ -162,7 +165,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -237,7 +240,31 @@
                 <td><span class="badge badge-school">${item.school}</span></td>
                 <td><span class="badge badge-self">${item.self}</span></td>
                 <td>${item.lastDate}</td>
+                <td>
+                    <button class="btn btn-reset" onclick="resetPassword('${item.class}', '${item.no}', '${item.name}')">🔑パス忘</button>
+                </td>
             </tr>`).join('');
+    };
+
+    // パスワード（PIN）のみを削除する関数
+    window.resetPassword = async (cls, no, name) => {
+        if (!confirm(`${cls}組 ${name} さんのパスワードをリセットしますか？\n（学習記録は消えません。次回のログイン時にパスワードを再設定できます）`)) return;
+
+        try {
+            const docId = `s_${cls}_${no}`;
+            const studentRef = doc(db, "students", docId);
+            
+            // pinフィールドを削除
+            await updateDoc(studentRef, {
+                pin: deleteField()
+            });
+
+            alert(`${name} さんのパスワードをリセットしました。`);
+            location.reload();
+        } catch (e) {
+            console.error(e);
+            alert("リセットに失敗しました。名簿が登録されているか確認してください。");
+        }
     };
 
     function updateSummary(thisMonthTotal) {
@@ -272,12 +299,10 @@
         if(!document.getElementById(id).checked) return alert("チェックボックスにチェックを入れてください");
         if(!confirm("本当に削除しますか？")) return;
 
-        // ログ削除
         const s1 = await getDocs(collection(db, "learning_logs"));
         for(const d of s1.docs) await deleteDoc(doc(db, "learning_logs", d.id));
 
         if(m === 'all') {
-            // 生徒ドキュメントを物理削除（これでパスワードも消える）
             const s2 = await getDocs(collection(db, "students"));
             for(const d of s2.docs) await deleteDoc(doc(db, "students", d.id));
             alert("パスワードを含むすべてのデータを削除しました。名簿を再登録してください。");
