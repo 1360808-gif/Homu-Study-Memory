@@ -108,6 +108,15 @@
     render();
   });
 
+  // ヘルパー関数: 分を時間表記に変換
+  function formatMinutes(totalMin) {
+    if (totalMin === 0) return "0分";
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h > 0) return m > 0 ? `${h}時間${m}分` : `${h}時間`;
+    return `${m}分`;
+  }
+
   const classCtx = document.getElementById('classChart').getContext('2d');
   let classChart = new Chart(classCtx, {
     type: 'bar',
@@ -115,7 +124,6 @@
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
   });
 
-  // ★個人グラフ：週単位で見やすいように「bar（積み上げ）」に変更しています
   const personalCtx = document.getElementById('personalChart').getContext('2d');
   let personalChart = new Chart(personalCtx, {
     type: 'bar',
@@ -125,14 +133,16 @@
 
   function render() {
     let classTotals = { "1": {s:0, f:0}, "2": {s:0, f:0}, "3": {s:0, f:0} };
-    let weeklyGroups = {}; // 週集計用オブジェクト
+    let weeklyGroups = {}; 
     let grandTotal = 0;
 
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
     const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
+    const twoWeeksSun = new Date(lastSun); twoWeeksSun.setDate(lastSun.getDate() - 7); // 先々週の基準
+
     const thisM = now.getMonth(), lastM = (thisM === 0) ? 11 : thisM - 1;
-    let stats = { tw:0, lw:0, tm:0, lm:0 };
+    let stats = { tw:0, lw:0, llw:0, tm:0, lm:0 };
 
     cachedLogs.forEach(log => {
       const isMine = log.name === myName;
@@ -140,13 +150,13 @@
       const totalTime = (log.school + log.self);
 
       if (isMine) {
-        // AI統計用の日単位判定
         if (logDate >= sun) stats.tw += totalTime;
         else if (logDate >= lastSun && logDate < sun) stats.lw += totalTime;
+        else if (logDate >= twoWeeksSun && logDate < lastSun) stats.llw += totalTime; // 先々週を算出
+
         if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) stats.tm += totalTime;
         else if (logDate.getMonth() === lastM) stats.lm += totalTime;
 
-        // ★週ラベルの作成ロジック（月曜〜日曜）
         const d = new Date(log.date);
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
@@ -168,28 +178,23 @@
       grandTotal += totalTime;
     });
 
-    // 学年合計プログレスバー
     const target = 30000;
     const percent = Math.min(100, Math.round((grandTotal / target) * 100));
     document.getElementById('progress-bar').style.width = percent + '%';
     document.getElementById('progress-bar').innerText = percent + '%';
     document.getElementById('goal-text').innerText = `学年合計: ${grandTotal}分 (目標まであと ${Math.max(0, target - grandTotal)}分)`;
 
-    // クラスチャート更新
     classChart.data.datasets[0].data = [classTotals["1"].s/denoms["1"], classTotals["2"].s/denoms["2"], classTotals["3"].s/denoms["3"]];
     classChart.data.datasets[1].data = [classTotals["1"].f/denoms["1"], classTotals["2"].f/denoms["2"], classTotals["3"].f/denoms["3"]];
     classChart.update();
 
-    // ★個人チャート更新（直近5週間を表示）
     const sortedWeekLabels = Object.keys(weeklyGroups).sort((a,b) => weeklyGroups[a].sortKey - weeklyGroups[b].sortKey);
     const displayWeeks = sortedWeekLabels.slice(-5);
-    
     personalChart.data.labels = displayWeeks;
     personalChart.data.datasets[0].data = displayWeeks.map(w => weeklyGroups[w].s);
     personalChart.data.datasets[1].data = displayWeeks.map(w => weeklyGroups[w].f);
     personalChart.update();
 
-    // AIアドバイス（myDataの代わりに統計を渡す）
     updateAIAdvice(stats, cachedLogs.filter(l => l.name === myName));
   }
 
@@ -199,20 +204,38 @@
     const aiIcon = document.getElementById('ai-icon');
     const userTitle = document.getElementById('user-title');
 
+    // 称号判定
     let title = "かけだしの学習者";
     if (myLogs.length > 10) title = "きろくの達人";
     const totalS = myLogs.reduce((a,b)=>a+b.school,0), totalF = myLogs.reduce((a,b)=>a+b.self,0);
     if (totalF > totalS * 1.5) title = "じしゅうの鬼";
     userTitle.innerText = title;
 
-    if (stats.tw > stats.lw && stats.lw > 0) {
-      aiText.innerText = "すごい！先週よりペースが上がっているよ！その調子！"; aiIcon.innerText = "🔥";
-    } else if (stats.tm < stats.lm && stats.tm > 0) {
-      aiText.innerText = "先月よりのんびりペースかな？ここから取り返そう！"; aiIcon.innerText = "🐢";
+    // 比較ロジック: 今週が0なら「先週 vs 先々週」を表示
+    let compA, compB, labelA, labelB;
+    if (stats.tw > 0) {
+      compA = stats.tw; labelA = "今週";
+      compB = stats.lw; labelB = "先週";
+    } else {
+      compA = stats.lw; labelA = "先週";
+      compB = stats.llw; labelB = "先々週";
+    }
+
+    if (compA > compB && compB > 0) {
+      aiText.innerText = `${labelA}は${labelB}よりペースが上がっているよ！その調子！`; aiIcon.innerText = "🔥";
+    } else if (compA < compB && compA > 0) {
+      aiText.innerText = `${labelA}は${labelB}よりのんびりペースかな？ここから取り返そう！`; aiIcon.innerText = "🐢";
     } else {
       aiText.innerText = "きみの頑張りをしっかり見守っているよ！"; aiIcon.innerText = "🤖";
     }
-    aiStats.innerHTML = `今週:${stats.tw}分 (先週:${stats.lw}分) / 今月:${stats.tm}分 (先月:${stats.lm}分)`;
+
+    // 表示用に整形
+    const aStr = formatMinutes(compA);
+    const bStr = formatMinutes(compB);
+    const tmStr = formatMinutes(stats.tm);
+    const lmStr = formatMinutes(stats.lm);
+
+    aiStats.innerHTML = `${labelA}:${aStr} (${labelB}:${bStr}) / 今月:${tmStr} (先月:${lmStr})`;
   }
 
   window.goToInput = () => location.href = `input.html${window.location.search}`;
