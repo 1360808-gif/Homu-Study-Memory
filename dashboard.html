@@ -19,7 +19,7 @@
   .ai-text { font-size: 14px; font-weight: bold; color: #0277bd; line-height: 1.4; }
   .ai-stats { font-size: 11px; color: #546e7a; margin-top: 5px; }
 
-  /* ボタンエリア */
+  /* ボタン共通設定 */
   .button-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px 0; }
   .btn-record { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3); }
   .btn-analysis { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #3498db, #2980b9); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); }
@@ -65,14 +65,19 @@
     <div class="chart-container"><canvas id="personalChart"></canvas></div>
   </div>
 
-  <button class="btn-analysis" style="margin-bottom: 20px;" onclick="goToAnalysis()">📊 分析・ランキング画面へ</button>
-  <button style="width:100%; padding:15px; background:#95a5a6; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="location.href='index.html'">🚪 ログアウト</button>
+  <div class="button-group" style="margin-top: 20px;">
+    <button class="btn-record" onclick="goToInput()">✏️ 学習時間をきろくする</button>
+    <button class="btn-analysis" onclick="goToAnalysis()">📊 分析・ランキング画面へ</button>
+  </div>
+
+  <button style="width:100%; padding:15px; background:#95a5a6; color:white; border:none; border-radius:10px; cursor:pointer; margin-top:10px;" onclick="location.href='index.html'">🚪 ログアウト</button>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import { getFirestore, collection, onSnapshot, query, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
+  // ※Firebaseの設定は以前のまま変更なし
   const firebaseConfig = {
     apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
     authDomain: "study-app-4215b.firebaseapp.com",
@@ -89,9 +94,8 @@
   document.getElementById('user-name-display').innerText = `${myClass}組 ${myName} さん`;
 
   let cachedLogs = [];
-  let denoms = { "1": 30, "2": 30, "3": 30 }; // admin設定読み込み前の初期値
+  let denoms = { "1": 30, "2": 30, "3": 30 };
 
-  // 1. adminからの人数設定を受信
   onSnapshot(doc(db, "settings", "class_sizes"), (docSnap) => {
     if (docSnap.exists()) {
       denoms = docSnap.data();
@@ -99,7 +103,6 @@
     }
   });
 
-  // 2. 学習ログを読み込み
   onSnapshot(query(collection(db, "learning_logs"), orderBy("date", "asc")), (snapshot) => {
     cachedLogs = [];
     snapshot.forEach(doc => cachedLogs.push(doc.data()));
@@ -125,7 +128,6 @@
     let myData = { labels: [], s: [], f: [] };
     let grandTotal = 0;
 
-    // AI比較用の日付設定
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
     const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
@@ -138,10 +140,8 @@
       const totalTime = (log.school + log.self);
 
       if (isMine) {
-        // AI比較用集計
         if (logDate >= sun) stats.tw += totalTime;
         else if (logDate >= lastSun && logDate < sun) stats.lw += totalTime;
-        
         if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) stats.tm += totalTime;
         else if (logDate.getMonth() === lastM) stats.lm += totalTime;
 
@@ -157,7 +157,6 @@
       grandTotal += totalTime;
     });
 
-    // 目標・グラフ更新
     const target = 30000;
     const percent = Math.min(100, Math.round((grandTotal / target) * 100));
     document.getElementById('progress-bar').style.width = percent + '%';
@@ -182,14 +181,12 @@
     const aiIcon = document.getElementById('ai-icon');
     const userTitle = document.getElementById('user-title');
 
-    // 称号設定
     let title = "かけだしの学習者";
     if (myData.s.length > 10) title = "きろくの達人";
     const totalS = myData.s.reduce((a,b)=>a+b,0), totalF = myData.f.reduce((a,b)=>a+b,0);
     if (totalF > totalS * 1.5) title = "じしゅうの鬼";
     userTitle.innerText = title;
 
-    // 比較コメント
     if (stats.tw > stats.lw && stats.lw > 0) {
       aiText.innerText = "すごい！先週よりペースが上がっているよ！その調子！"; aiIcon.innerText = "🔥";
     } else if (stats.tm < stats.lm && stats.tm > 0) {
