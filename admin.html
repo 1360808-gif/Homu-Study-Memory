@@ -1,78 +1,143 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>管理者画面</title>
-<style>
-  body { font-family: sans-serif; background: #f4f7f6; padding: 20px; text-align: center; }
-  .container { background: white; max-width: 500px; margin: auto; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-  .section { border-bottom: 1px solid #eee; padding: 20px 0; }
-  h2 { color: #2c3e50; font-size: 18px; }
-  input[type="number"] { width: 50px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; text-align: center; }
-  .btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-  .btn-back { display: block; margin-top: 20px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者画面 - 名簿・人数管理</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; margin: 0; }
+        .container { background: white; max-width: 600px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .section { border-bottom: 2px solid #eee; padding-bottom: 25px; margin-bottom: 25px; text-align: left; }
+        h1 { font-size: 22px; color: #2c3e50; }
+        h2 { font-size: 18px; color: #d35400; margin-bottom: 15px; border-left: 5px solid #d35400; padding-left: 10px; }
+        
+        /* フォームのスタイル */
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-add { background-color: #3498db; }
+        .btn-save { background-color: #27ae60; width: 100%; margin-top: 10px; }
+        .btn-logout { background: none; color: #7f8c8d; text-decoration: underline; margin-top: 20px; font-size: 14px; }
+
+        /* リストのスタイル */
+        #student-list { margin-top: 15px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 10px; background: #fafafa; }
+        .student-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+    </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>⚙️ 管理者設定</h1>
+    <h1>⚙️ 管理者設定</h1>
 
-  <div class="section">
-    <h2>👥 クラス人数の設定</h2>
-    <p style="font-size: 12px; color: #666;">ダッシュボードの平均計算に使われます</p>
-    1組: <input type="number" id="denom-1" value="30">人<br><br>
-    2組: <input type="number" id="denom-2" value="30">人<br><br>
-    3組: <input type="number" id="denom-3" value="30">人<br>
-    <button class="btn-save" onclick="saveClassSizes()">設定を保存して反映</button>
-  </div>
+    <div class="section">
+        <h2>👥 クラス人数の設定</h2>
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">ダッシュボードの「クラス平均」の分母になります。</p>
+        <div class="form-row">
+            1組: <input type="number" id="denom-1" style="width:50px">人 / 
+            2組: <input type="number" id="denom-2" style="width:50px">人 / 
+            3組: <input type="number" id="denom-3" style="width:50px">人
+        </div>
+        <button class="btn btn-save" onclick="saveClassSizes()">クラス人数を反映する</button>
+    </div>
 
-  <a href="index.html" class="btn-back">ログアウト画面へ</a>
+    <div class="section">
+        <h2>👤 児童の登録</h2>
+        <div class="form-row">
+            <input type="number" id="st-class" placeholder="組" style="width:50px">
+            <input type="number" id="st-no" placeholder="番号" style="width:60px">
+            <input type="text" id="st-name" placeholder="なまえ" style="flex:1">
+            <button class="btn btn-add" onclick="addStudent()">追加</button>
+        </div>
+        <div id="student-list">読み込み中...</div>
+    </div>
+
+    <button class="btn-logout" onclick="location.href='index.html'">ログイン画面へ戻る</button>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
-    authDomain: "study-app-4215b.firebaseapp.com",
-    projectId: "study-app-4215b",
-    storageBucket: "study-app-4215b.firebasestorage.app",
-    messagingSenderId: "896254140020",
-    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // 初期値の読み込み
-  async function loadSettings() {
-    const docSnap = await getDoc(doc(db, "settings", "class_sizes"));
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      document.getElementById('denom-1').value = data["1"];
-      document.getElementById('denom-2').value = data["2"];
-      document.getElementById('denom-3').value = data["3"];
-    }
-  }
-  loadSettings();
-
-  // 保存処理
-  window.saveClassSizes = async function() {
-    const settings = {
-      "1": Number(document.getElementById('denom-1').value) || 1,
-      "2": Number(document.getElementById('denom-2').value) || 1,
-      "3": Number(document.getElementById('denom-3').value) || 1
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+        authDomain: "study-app-4215b.firebaseapp.com",
+        projectId: "study-app-4215b",
+        storageBucket: "study-app-4215b.firebasestorage.app",
+        messagingSenderId: "896254140020",
+        appId: "1:896254140020:web:cbfa61dbc4345362807b21"
     };
-    try {
-      await setDoc(doc(db, "settings", "class_sizes"), settings);
-      alert("全児童のダッシュボードに反映しました！");
-    } catch (e) {
-      alert("保存エラー: " + e);
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- クラス人数の読み込みと保存 ---
+    async function loadClassSizes() {
+        const docSnap = await getDoc(doc(db, "settings", "class_sizes"));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('denom-1').value = data["1"] || 30;
+            document.getElementById('denom-2').value = data["2"] || 30;
+            document.getElementById('denom-3').value = data["3"] || 30;
+        }
     }
-  };
+
+    window.saveClassSizes = async function() {
+        const settings = {
+            "1": Number(document.getElementById('denom-1').value) || 1,
+            "2": Number(document.getElementById('denom-2').value) || 1,
+            "3": Number(document.getElementById('denom-3').value) || 1
+        };
+        try {
+            await setDoc(doc(db, "settings", "class_sizes"), settings);
+            alert("クラス人数を更新しました！");
+        } catch (e) { alert("エラー: " + e); }
+    };
+
+    // --- 名簿の読み込みと登録 ---
+    async function loadStudents() {
+        const listEl = document.getElementById('student-list');
+        listEl.innerHTML = "読み込み中...";
+        try {
+            const q = query(collection(db, "students"));
+            const querySnapshot = await getDocs(q);
+            let students = [];
+            querySnapshot.forEach(doc => students.push(doc.data()));
+            
+            // クラス順・番号順に並べ替え
+            students.sort((a,b) => (a.class !== b.class) ? a.class - b.class : a.no - b.no);
+
+            listEl.innerHTML = "";
+            students.forEach(s => {
+                listEl.innerHTML += `<div class="student-item"><span>${s.class}組 ${s.no}番</span> <strong>${s.name}</strong></div>`;
+            });
+            if(students.length === 0) listEl.innerHTML = "登録されている児童はいません。";
+        } catch (e) { listEl.innerHTML = "エラー: " + e; }
+    }
+
+    window.addStudent = async function() {
+        const cls = document.getElementById('st-class').value;
+        const no = document.getElementById('st-no').value;
+        const name = document.getElementById('st-name').value;
+
+        if(!cls || !no || !name) { alert("すべて入力してください"); return; }
+
+        const studentId = `s_${cls}_${no}`;
+        try {
+            await setDoc(doc(db, "students", studentId), {
+                class: Number(cls),
+                no: Number(no),
+                name: name
+            });
+            alert("登録しました！");
+            document.getElementById('st-name').value = "";
+            document.getElementById('st-no').value = Number(no) + 1; // 次の番号を自動セット
+            loadStudents();
+        } catch (e) { alert("登録エラー: " + e); }
+    };
+
+    // 初期起動
+    loadClassSizes();
+    loadStudents();
 </script>
 </body>
 </html>
