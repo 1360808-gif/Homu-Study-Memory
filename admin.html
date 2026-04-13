@@ -11,7 +11,6 @@
         h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 20px; }
         h2 { font-size: 18px; color: #d35400; border-left: 5px solid #d35400; padding-left: 10px; margin-bottom: 15px; }
 
-        /* 進捗サマリーのスタイル */
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .summary-card { background: #fff; border: 2px solid #3498db; border-radius: 15px; padding: 15px; text-align: center; }
         .summary-card.goal { border-color: #e67e22; }
@@ -20,7 +19,10 @@
         .progress-mini-bg { background: #eee; border-radius: 10px; height: 12px; margin-top: 10px; overflow: hidden; }
         .progress-mini-bar { background: linear-gradient(90deg, #f1c40f, #e67e22); height: 100%; transition: width 0.5s; }
 
-        /* フィルタパネル */
+        /* 100%達成時のアニメーション */
+        .progress-mini-bar.achieved { background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); background-size: 200% 100%; animation: rainbow 2s linear infinite; }
+        @keyframes rainbow { 0% { background-position: 200% 0; } 100% { background-position: 0 0; } }
+
         .filter-panel { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #dee2e6; }
         .filter-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
         .filter-label { font-weight: bold; min-width: 90px; color: #495057; font-size: 14px; }
@@ -28,12 +30,10 @@
         .filter-group label { cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 13px; background: #fff; padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd; transition: 0.2s; }
         input[type="radio"]:checked + span { color: #d35400; font-weight: bold; }
 
-        /* AI分析ボックス */
         .ai-analysis-box { background: linear-gradient(135deg, #e3f2fd, #ffffff); border: 2px solid #2196f3; border-radius: 15px; padding: 18px; margin-bottom: 20px; }
         .ai-title { font-weight: bold; color: #1976d2; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .ai-report { font-size: 14px; line-height: 1.6; color: #34495e; white-space: pre-wrap; }
 
-        /* テーブル */
         .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th { background: #f1f3f5; color: #495057; position: sticky; top: 0; padding: 12px; z-index: 10; text-align: left; border-bottom: 2px solid #dee2e6; }
@@ -42,7 +42,6 @@
         .badge-school { background: #e3f2fd; color: #1976d2; }
         .badge-self { background: #fff3e0; color: #e65100; }
 
-        /* ボタン */
         .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
         .btn-save { background: #27ae60; }
         .btn-add { background: #3498db; }
@@ -58,18 +57,18 @@
 
     <div class="summary-grid">
         <div class="summary-card goal">
-            <div class="summary-label">現在の学年合計</div>
+            <div class="summary-label">今月の学年合計</div>
             <div class="summary-value" id="sm-total-time">0分</div>
             <div class="progress-mini-bg"><div class="progress-mini-bar" id="sm-progress-bar" style="width: 0%;"></div></div>
             <div style="font-size:11px; margin-top:5px; color:#e67e22;" id="sm-percent">達成率: 0%</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">目標まであと</div>
+            <div class="summary-label" id="remain-label">目標まであと</div>
             <div class="summary-value" id="sm-remain-time">---</div>
-            <div style="font-size:11px; margin-top:5px; color:#7f8c8d;">目標：500時間(30,000分)</div>
+            <div style="font-size:11px; margin-top:5px; color:#7f8c8d;" id="target-label">目標：分析中...</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">目標達成の予測</div>
+            <div class="summary-label">今月の着地予測</div>
             <div class="summary-value" id="sm-prediction">分析中...</div>
             <div style="font-size:11px; margin-top:5px; color:#7f8c8d;" id="sm-pace">平均：---</div>
         </div>
@@ -101,7 +100,7 @@
                 <div class="filter-group">
                     <label><input type="radio" name="period-filter" value="all" checked onchange="renderStatsTable()"><span>全期間</span></label>
                     <label><input type="radio" name="period-filter" value="week" onchange="renderStatsTable()"><span>1週間</span></label>
-                    <label><input type="radio" name="period-filter" value="month" onchange="renderStatsTable()"><span>1ヶ月</span></label>
+                    <label><input type="radio" name="period-filter" value="month" onchange="renderStatsTable()"><span>今月のみ</span></label>
                 </div>
             </div>
             <div class="filter-row">
@@ -114,8 +113,8 @@
                         <option value="self">じぶん学習</option>
                     </select>
                     <select id="sort-order" onchange="renderStatsTable()">
-                        <option value="asc">昇順（少→多）</option>
-                        <option value="desc" selected>降順（多→少）</option>
+                        <option value="asc">昇順</option>
+                        <option value="desc" selected>降順</option>
                     </select>
                 </div>
             </div>
@@ -174,7 +173,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, query } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -191,7 +190,6 @@
     let allStudents = [];
     let allLogs = [];
 
-    // 時間フォーマット関数
     function formatMin(m) {
         if (m === 0) return "0分";
         const h = Math.floor(m / 60);
@@ -224,32 +222,45 @@
         const sortO = document.getElementById('sort-order').value;
         
         const now = new Date();
+        const thisM = now.getMonth();
+        const thisY = now.getFullYear();
+        const lastM = (thisM === 0) ? 11 : thisM - 1;
+        const lastMYear = (thisM === 0) ? thisY - 1 : thisY;
+
         let start = new Date(0);
         if(periodF === 'week') start = new Date(now - 7*24*60*60*1000);
-        else if(periodF === 'month') start = new Date(now - 30*24*60*60*1000);
+        else if(periodF === 'month') start = new Date(thisY, thisM, 1);
 
         let stats = {};
         allStudents.forEach(s => stats[nameMapKey(s.name, s.class)] = { name:s.name, class:s.class, no:s.no, school:0, self:0, total:0, lastDate:"-" });
         
-        let grandTotal = 0;
-        let firstLogDate = now;
+        let gradeThisMonthTotal = 0;
+        let gradeLastMonthTotal = 0;
 
         allLogs.forEach(l => {
             const d = new Date(l.date);
-            grandTotal += (l.school + l.self);
-            if (d < firstLogDate) firstLogDate = d;
+            const total = l.school + l.self;
 
+            // 🎉 学年目標ロジック用の集計
+            if (d.getMonth() === thisM && d.getFullYear() === thisY) {
+                gradeThisMonthTotal += total;
+            }
+            if (d.getMonth() === lastM && d.getFullYear() === lastMYear) {
+                gradeLastMonthTotal += total;
+            }
+
+            // テーブル用集計
             const key = nameMapKey(l.name, l.class);
             if(d >= start && stats[key]) {
                 stats[key].school += l.school;
                 stats[key].self += l.self;
-                stats[key].total += (l.school + l.self);
+                stats[key].total += total;
                 if(stats[key].lastDate < l.date) stats[key].lastDate = l.date;
             }
         });
 
         // サマリー表示とAIアドバイスの更新
-        const summaryData = updateSummary(grandTotal, firstLogDate);
+        const summaryData = updateSummary(gradeThisMonthTotal, gradeLastMonthTotal);
 
         let list = Object.values(stats);
         list = list.filter(item => classF === "all" || item.class == classF);
@@ -280,58 +291,64 @@
 
     function nameMapKey(name, cls) { return `${cls}_${name}`; }
 
-    function updateSummary(totalMin, firstDate) {
-        const targetMin = 30000;
-        const percent = Math.min(100, Math.round((totalMin / targetMin) * 100));
-        
-        document.getElementById('sm-total-time').innerText = formatMin(totalMin);
-        document.getElementById('sm-progress-bar').style.width = percent + '%';
-        document.getElementById('sm-percent').innerText = `達成率: ${percent}%`;
-        document.getElementById('sm-remain-time').innerText = formatMin(Math.max(0, targetMin - totalMin));
-
+    function updateSummary(thisMonthTotal, lastMonthTotal) {
         const now = new Date();
-        const daysPassed = Math.max(1, Math.floor((now - firstDate) / (1000 * 60 * 60 * 24)));
-        const dailyAvg = totalMin / daysPassed;
-        document.getElementById('sm-pace').innerText = `1日平均：約${Math.round(dailyAvg)}分`;
+        const currentDate = now.getDate();
+        
+        // 🎉 児童側と同じ動的目標ロジック
+        // 10日までは前月実績ベース、それ以降は今月実績ベース
+        const baseForTarget = (currentDate <= 10 && lastMonthTotal > 0) ? lastMonthTotal : thisMonthTotal;
+        const targetMin = baseForTarget > 0 ? Math.round(baseForTarget * 1.1) : 30000;
+        
+        const percent = Math.min(100, Math.round((thisMonthTotal / targetMin) * 100));
+        const progressBar = document.getElementById('sm-progress-bar');
+        
+        document.getElementById('sm-total-time').innerText = formatMin(thisMonthTotal);
+        progressBar.style.width = percent + '%';
+        document.getElementById('sm-percent').innerText = `今月の達成率: ${percent}%`;
+        document.getElementById('sm-remain-time').innerText = formatMin(Math.max(0, targetMin - thisMonthTotal));
+        document.getElementById('target-label').innerText = `目標：${formatMin(targetMin)} (前月比1.1倍)`;
 
-        let predictionText = "データ不足";
-        if (dailyAvg > 0) {
-            const daysToGoal = Math.ceil((targetMin - totalMin) / dailyAvg);
-            if (daysToGoal <= 0) {
-                predictionText = "目標達成！🎉";
-            } else {
-                const goalDate = new Date();
-                goalDate.setDate(now.getDate() + daysToGoal);
-                predictionText = `${goalDate.getMonth()+1}月${goalDate.getDate()}日ごろ`;
-            }
+        // 達成時の虹色演出
+        if(percent >= 100) progressBar.classList.add('achieved');
+        else progressBar.classList.remove('achieved');
+
+        // 着地予測ロジック
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const dailyAvg = thisMonthTotal / currentDate;
+        const predictedTotal = dailyAvg * daysInMonth;
+        
+        document.getElementById('sm-pace').innerText = `今月の1日平均：約${Math.round(dailyAvg)}分`;
+
+        let predictionText = "分析中...";
+        if (thisMonthTotal >= targetMin) {
+            predictionText = "目標達成！🎉";
+        } else if (dailyAvg > 0) {
+            predictionText = predictedTotal >= targetMin ? "達成見込み" : "ペースアップが必要";
         }
         document.getElementById('sm-prediction').innerText = predictionText;
 
-        // 次月のおすすめ（10%増）を計算して返す
-        const nextMonthRecMin = Math.round((dailyAvg * 30) * 1.1);
-        return { dailyAvg, nextMonthRecMin };
+        return { dailyAvg, predictedTotal, targetMin, thisMonthTotal };
     }
 
     function updateAI(list, period, summary) {
-        const pLabel = {all:"全期間", week:"1週間", month:"1ヶ月"}[period];
+        const pLabel = {all:"全期間", week:"1週間", month:"今月"}[period];
         const activeCount = list.filter(i => i.total > 0).length;
         
-        const recHours = Math.floor(summary.nextMonthRecMin / 60);
-        const recMin = summary.nextMonthRecMin % 60;
-
         let report = `【${pLabel}の状況】\n対象児童 ${list.length}名のうち、${activeCount}名が学習を記録しました。\n\n`;
-        report += `🚀 **AIレコメンド：次月のステップアップ目標**\n`;
-        report += `過去のペースから分析した「ちょっと上の目標」は **【学年合計 ${recHours}時間${recMin}分】** です。\n`;
-        report += `（現在の1日平均 ${Math.round(summary.dailyAvg)}分 を10%アップさせた目標値です）\n\n`;
+        report += `🚀 **AI分析：今月の着地予想**\n`;
+        report += `現在のペースを維持すると、今月末には合計 **【${formatMin(Math.round(summary.predictedTotal))}】** に達する見込みです。\n`;
         
-        if (summary.dailyAvg > 100) {
-            report += `💡 非常に良いペースです！「じぶん学習」の比率が高い児童を褒め、クラス全体に広げましょう。`;
+        if (summary.thisMonthTotal >= summary.targetMin) {
+            report += `🎉 すばらしい！すでに今月の目標を突破しました。`;
+        } else if (summary.predictedTotal >= summary.targetMin) {
+            report += `✅ 順調です。このままの習慣を維持できるよう励ましましょう。`;
         } else {
-            report += `💡 まずは毎日ログインする習慣を。短時間でも記録を残している児童への声掛けが有効です。`;
+            report += `⚠️ 目標達成にはあと少しペースアップが必要です。特に「じぶん学習」の記録が止まっている児童がいないか確認してください。`;
         }
 
         document.getElementById('ai-report').innerText = report;
-        document.getElementById('ai-title').innerText = "✅ AI分析レポート（目標提案あり）";
+        document.getElementById('ai-title').innerText = "✅ AI分析レポート（目標達成予測）";
     }
 
     window.saveClassSizes = async () => {
