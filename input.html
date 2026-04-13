@@ -3,35 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学習きろく - 入力</title>
+<title>がんばり入力 - 学習アプリ</title>
 <style>
-  body { font-family: sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; padding: 20px; margin: 0; }
-  .input-card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-  h1 { font-size: 20px; color: #333; margin-bottom: 25px; }
-  .input-group { text-align: left; margin-bottom: 20px; }
-  label { font-weight: bold; font-size: 14px; display: block; margin-bottom: 8px; color: #555; }
-  input { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-  .btn-save { width: 100%; padding: 15px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-  .btn-back { width: 100%; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 10px; margin-top: 15px; cursor: pointer; font-size: 14px; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
+  .app-container { background: #fff; width: 95%; max-width: 500px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; text-align: center; }
+  
+  h1 { font-size: 24px; color: #2c3e50; margin-bottom: 10px; }
+  .user-info { font-size: 18px; margin-bottom: 25px; font-weight: bold; color: #3498db; }
+  
+  .input-card { background-color: #f9f9f9; padding: 20px; border-radius: 15px; border: 1px solid #eee; margin-bottom: 20px; }
+  .input-group { margin-bottom: 25px; text-align: left; }
+  label { display: block; margin-bottom: 10px; font-weight: bold; font-size: 16px; color: #555; }
+  input[type="number"] { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 12px; font-size: 20px; box-sizing: border-box; transition: 0.3s; }
+  input[type="number"]:focus { border-color: #3498db; outline: none; background-color: #f0f7ff; }
+  
+  .btn-submit { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #27ae60, #2ecc71); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); transition: 0.2s; }
+  .btn-submit:active { transform: scale(0.98); }
+  
+  .btn-back { width: 100%; padding: 12px; font-size: 14px; font-weight: bold; color: #7f8c8d; background: none; border: none; cursor: pointer; margin-top: 15px; text-decoration: underline; }
+
+  .status-msg { margin-top: 15px; padding: 10px; border-radius: 8px; display: none; font-weight: bold; }
+  .success { background-color: #d4edda; color: #155724; display: block; }
 </style>
 </head>
 <body>
 
-<div class="input-card">
-  <h1 id="greeting">学習時間をきろくしよう</h1>
-  
-  <div class="input-group">
-    <label>🏫 がっこうでの勉強（分）</label>
-    <input type="number" id="school-time" placeholder="0" min="0">
+<div class="app-container">
+  <h1>✏️ がんばり入力</h1>
+  <div class="user-info" id="user-display">こんにちは！</div>
+
+  <div class="input-card">
+    <div class="input-group">
+      <label>🏫 がっこうで 勉強した時間（分）</label>
+      <input type="number" id="school-time" placeholder="0" min="0">
+    </div>
+
+    <div class="input-group">
+      <label>🏠 じぶんの勉強（家庭学習など/分）</label>
+      <input type="number" id="self-time" placeholder="0" min="0">
+    </div>
+
+    <button class="btn-submit" onclick="saveData()">🚀 送信する（上書き）</button>
+    <div id="status" class="status-msg"></div>
   </div>
-  
-  <div class="input-group">
-    <label>🏠 じぶんの勉強（分）</label>
-    <input type="number" id="self-time" placeholder="0" min="0">
-  </div>
-  
-  <button class="btn-save" onclick="saveData()">🚀 送信する</button>
-  <button class="btn-back" onclick="history.back()">もどる</button>
+
+  <button class="btn-back" onclick="history.back()">⬅️ ダッシュボードにもどる</button>
 </div>
 
 <script type="module">
@@ -49,21 +65,24 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+
   const params = new URLSearchParams(window.location.search);
-  const myName = params.get('name');
-  const myClass = params.get('class');
+  const myName = params.get('name') || "ゲスト";
+  const myClass = params.get('class') || "1";
+  document.getElementById('user-display').innerText = `${myClass}組 ${myName} さんの記録`;
 
   window.saveData = async function() {
-    const sTime = Number(document.getElementById('school-time').value) || 0;
-    const hTime = Number(document.getElementById('self-time').value) || 0;
-    
-    // 今日の日付を取得 (例: 2026-04-13)
+    const schoolTime = document.getElementById('school-time').value || 0;
+    const selfTime = document.getElementById('self-time').value || 0;
+    const status = document.getElementById('status');
+
+    // 今日の日付を取得 (YYYY-MM-DD)
     const now = new Date();
     const dateStr = now.getFullYear() + "-" + 
                     ("0" + (now.getMonth() + 1)).slice(-2) + "-" + 
                     ("0" + now.getDate()).slice(-2);
 
-    // 【重要】ドキュメントIDを「名前_日付」に固定。これで同じ日は上書きになる。
+    // 【重要】ドキュメントIDを「名前_日付」に固定
     const docId = `${myName}_${dateStr}`;
 
     try {
@@ -71,14 +90,21 @@
         name: myName,
         class: myClass,
         date: dateStr,
-        school: sTime,
-        self: hTime,
+        school: Number(schoolTime),
+        self: Number(selfTime),
         timestamp: new Date()
       });
-      alert("ほぞんしました！");
-      history.back(); // ダッシュボードへ戻る
+
+      status.innerText = "✅ 保存しました！";
+      status.className = "status-msg success";
+      
+      // 2秒後に自動で戻る
+      setTimeout(() => {
+        history.back();
+      }, 1500);
+
     } catch (e) {
-      alert("エラー: " + e);
+      alert("エラーが発生しました: " + e);
     }
   };
 </script>
