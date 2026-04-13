@@ -3,41 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理者画面 - 名簿・人数管理</title>
+    <title>管理者画面 - データ整理</title>
     <style>
         body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; margin: 0; }
-        .container { background: white; max-width: 600px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .container { background: white; max-width: 650px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .section { border-bottom: 2px solid #eee; padding-bottom: 25px; margin-bottom: 25px; text-align: left; }
         h1 { font-size: 22px; color: #2c3e50; }
         h2 { font-size: 18px; color: #d35400; margin-bottom: 15px; border-left: 5px solid #d35400; padding-left: 10px; }
         
-        /* フォームのスタイル */
-        .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        
         .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
         .btn-add { background-color: #3498db; }
         .btn-save { background-color: #27ae60; width: 100%; margin-top: 10px; }
-        .btn-logout { background: none; color: #7f8c8d; text-decoration: underline; margin-top: 20px; font-size: 14px; }
-
-        /* リストのスタイル */
-        #student-list { margin-top: 15px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 10px; background: #fafafa; }
-        .student-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .btn-delete { background-color: #e74c3c; font-size: 11px; padding: 4px 8px; }
+        
+        /* 危険エリアのスタイル */
+        .danger-zone { background-color: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; margin-top: 20px; }
+        .btn-danger { background-color: #c0392b; width: 100%; padding: 12px; margin-top: 10px; font-size: 14px; }
+        .btn-danger:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        #student-list, #log-list { margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 10px; background: #fafafa; font-size: 13px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚙️ 管理者設定</h1>
+    <h1>⚙️ 管理者総合管理</h1>
 
     <div class="section">
-        <h2>👥 クラス人数の設定</h2>
-        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">ダッシュボードの「クラス平均」の分母になります。</p>
+        <h2>👥 クラス平均用の人数設定</h2>
         <div class="form-row">
             1組: <input type="number" id="denom-1" style="width:50px">人 / 
             2組: <input type="number" id="denom-2" style="width:50px">人 / 
             3組: <input type="number" id="denom-3" style="width:50px">人
         </div>
-        <button class="btn btn-save" onclick="saveClassSizes()">クラス人数を反映する</button>
+        <button class="btn btn-save" onclick="saveClassSizes()">人数設定を保存</button>
     </div>
 
     <div class="section">
@@ -45,18 +48,41 @@
         <div class="form-row">
             <input type="number" id="st-class" placeholder="組" style="width:50px">
             <input type="number" id="st-no" placeholder="番号" style="width:60px">
-            <input type="text" id="st-name" placeholder="なまえ" style="flex:1">
+            <input type="text" id="st-name" placeholder="名前" style="flex:1">
             <button class="btn btn-add" onclick="addStudent()">追加</button>
         </div>
-        <div id="student-list">読み込み中...</div>
+        <div id="student-list">名簿を読み込み中...</div>
     </div>
 
-    <button class="btn-logout" onclick="location.href='index.html'">ログイン画面へ戻る</button>
+    <div class="section">
+        <h2>📝 学習ログの履歴・個別削除</h2>
+        <div id="log-list">ログを読み込み中...</div>
+    </div>
+
+    <div class="section danger-zone">
+        <h2>⚠️ データの管理（削除・リセット）</h2>
+        
+        <div style="margin-bottom: 25px; border-bottom: 1px dashed #feb2b2; padding-bottom: 15px;">
+            <p style="font-size:13px; font-weight:bold; color:#c0392b; margin:0;">① 学習きろく（グラフ用データ）だけ全削除</p>
+            <p style="font-size:11px; color:#555; margin:5px 0;">※名簿（なまえ）は残ります。新学期や月替わりのリセットに。</p>
+            <label style="font-size:12px;"><input type="checkbox" id="check-log-only" onchange="toggleDanger('log')"> ログのみ削除に同意する</label>
+            <button id="btn-delete-log" class="btn btn-danger" disabled onclick="bulkDelete('learning_logs')">学習ログをすべて消去</button>
+        </div>
+
+        <div>
+            <p style="font-size:13px; font-weight:bold; color:#c0392b; margin:0;">② 【完全初期化】名簿もログもすべて削除</p>
+            <p style="font-size:11px; color:#555; margin:5px 0;">※名簿も消えます。来年度など完全に新しくする時に。</p>
+            <label style="font-size:12px;"><input type="checkbox" id="check-all" onchange="toggleDanger('all')"> すべてのデータを削除することに同意する</label>
+            <button id="btn-delete-all" class="btn btn-danger" disabled onclick="bulkDelete('all')">全データを完全に消去（リセット）</button>
+        </div>
+    </div>
+
+    <button style="border:none; background:none; text-decoration:underline; color:#7f8c8d; margin-top:20px; cursor:pointer;" onclick="location.href='index.html'">ログイン画面へ戻る</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -70,74 +96,77 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // --- クラス人数の読み込みと保存 ---
+    // 人数設定読み込み
     async function loadClassSizes() {
         const docSnap = await getDoc(doc(db, "settings", "class_sizes"));
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('denom-1').value = data["1"] || 30;
-            document.getElementById('denom-2').value = data["2"] || 30;
-            document.getElementById('denom-3').value = data["3"] || 30;
+            const d = docSnap.data();
+            document.getElementById('denom-1').value = d["1"]||30;
+            document.getElementById('denom-2').value = d["2"]||30;
+            document.getElementById('denom-3').value = d["3"]||30;
         }
     }
-
-    window.saveClassSizes = async function() {
-        const settings = {
-            "1": Number(document.getElementById('denom-1').value) || 1,
-            "2": Number(document.getElementById('denom-2').value) || 1,
-            "3": Number(document.getElementById('denom-3').value) || 1
-        };
-        try {
-            await setDoc(doc(db, "settings", "class_sizes"), settings);
-            alert("クラス人数を更新しました！");
-        } catch (e) { alert("エラー: " + e); }
+    window.saveClassSizes = async () => {
+        await setDoc(doc(db, "settings", "class_sizes"), {
+            "1": Number(document.getElementById('denom-1').value), "2": Number(document.getElementById('denom-2').value), "3": Number(document.getElementById('denom-3').value)
+        });
+        alert("人数を保存しました");
     };
 
-    // --- 名簿の読み込みと登録 ---
+    // 名簿読み込み・追加
     async function loadStudents() {
-        const listEl = document.getElementById('student-list');
-        listEl.innerHTML = "読み込み中...";
-        try {
-            const q = query(collection(db, "students"));
-            const querySnapshot = await getDocs(q);
-            let students = [];
-            querySnapshot.forEach(doc => students.push(doc.data()));
-            
-            // クラス順・番号順に並べ替え
-            students.sort((a,b) => (a.class !== b.class) ? a.class - b.class : a.no - b.no);
-
-            listEl.innerHTML = "";
-            students.forEach(s => {
-                listEl.innerHTML += `<div class="student-item"><span>${s.class}組 ${s.no}番</span> <strong>${s.name}</strong></div>`;
-            });
-            if(students.length === 0) listEl.innerHTML = "登録されている児童はいません。";
-        } catch (e) { listEl.innerHTML = "エラー: " + e; }
+        const querySnapshot = await getDocs(query(collection(db, "students"), orderBy("class"), orderBy("no")));
+        let html = "";
+        querySnapshot.forEach(d => {
+            const s = d.data();
+            html += `<div class="list-item"><span>${s.class}組 ${s.no}番 ${s.name}</span></div>`;
+        });
+        document.getElementById('student-list').innerHTML = html || "登録なし";
     }
-
-    window.addStudent = async function() {
-        const cls = document.getElementById('st-class').value;
-        const no = document.getElementById('st-no').value;
-        const name = document.getElementById('st-name').value;
-
-        if(!cls || !no || !name) { alert("すべて入力してください"); return; }
-
-        const studentId = `s_${cls}_${no}`;
-        try {
-            await setDoc(doc(db, "students", studentId), {
-                class: Number(cls),
-                no: Number(no),
-                name: name
-            });
-            alert("登録しました！");
-            document.getElementById('st-name').value = "";
-            document.getElementById('st-no').value = Number(no) + 1; // 次の番号を自動セット
-            loadStudents();
-        } catch (e) { alert("登録エラー: " + e); }
+    window.addStudent = async () => {
+        const c = document.getElementById('st-class').value, n = document.getElementById('st-no').value, nm = document.getElementById('st-name').value;
+        if(!c || !n || !nm) return;
+        await setDoc(doc(db, "students", `s_${c}_${n}`), { class:Number(c), no:Number(n), name:nm });
+        loadStudents();
     };
 
-    // 初期起動
-    loadClassSizes();
-    loadStudents();
+    // ログ履歴読み込み・個別削除
+    async function loadLogs() {
+        const q = query(collection(db, "learning_logs"), orderBy("timestamp", "desc"), limit(50));
+        const querySnapshot = await getDocs(q);
+        let html = "";
+        querySnapshot.forEach(d => {
+            const log = d.data();
+            html += `<div class="list-item"><span>${log.date} ${log.name} (${log.school+log.self}分)</span><button class="btn btn-delete" onclick="deleteLog('${d.id}')">消す</button></div>`;
+        });
+        document.getElementById('log-list').innerHTML = html || "履歴なし";
+    }
+    window.deleteLog = async (id) => { if(confirm("削除しますか？")) { await deleteDoc(doc(db, "learning_logs", id)); loadLogs(); } };
+
+    // ボタン有効化
+    window.toggleDanger = (type) => {
+        if(type === 'log') document.getElementById('btn-delete-log').disabled = !document.getElementById('check-log-only').checked;
+        if(type === 'all') document.getElementById('btn-delete-all').disabled = !document.getElementById('check-all').checked;
+    };
+
+    // 一括削除処理
+    window.bulkDelete = async (target) => {
+        const confirmMsg = target === 'all' ? "【超注意】名簿も含めすべて削除します。よろしいですか？" : "【確認】すべての学習データを削除します（名簿は残ります）。よろしいですか？";
+        if(!confirm(confirmMsg)) return;
+
+        const targetColls = target === 'all' ? ['learning_logs', 'students'] : ['learning_logs'];
+        
+        for (const collName of targetColls) {
+            const snapshot = await getDocs(collection(db, collName));
+            for (const d of snapshot.docs) {
+                await deleteDoc(doc(db, collName, d.id));
+            }
+        }
+        alert("削除が完了しました。");
+        location.reload();
+    };
+
+    loadClassSizes(); loadStudents(); loadLogs();
 </script>
 </body>
 </html>
