@@ -137,13 +137,17 @@
     let weeklyGroups = {}; 
     let grandTotal = 0;
     let gradeThisMonthTotal = 0;
+    let gradeLastMonthTotal = 0; // 先月の学年合計用
 
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
     const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
     const twoWeeksSun = new Date(lastSun); twoWeeksSun.setDate(lastSun.getDate() - 7);
 
-    const thisM = now.getMonth(), lastM = (thisM === 0) ? 11 : thisM - 1;
+    const thisM = now.getMonth();
+    const lastM = (thisM === 0) ? 11 : thisM - 1;
+    const lastMYear = (thisM === 0) ? now.getFullYear() - 1 : now.getFullYear();
+
     let stats = { tw:0, lw:0, llw:0, tm:0, lm:0 };
 
     cachedLogs.forEach(log => {
@@ -151,8 +155,13 @@
       const logDate = new Date(log.date);
       const totalTime = (log.school + log.self);
 
-      if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) {
+      // 今月の学年合計
+      if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) {
         gradeThisMonthTotal += totalTime;
+      }
+      // 先月の学年合計
+      if (logDate.getMonth() === lastM && logDate.getFullYear() === lastMYear) {
+        gradeLastMonthTotal += totalTime;
       }
 
       if (isMine) {
@@ -161,7 +170,7 @@
         else if (logDate >= twoWeeksSun && logDate < lastSun) stats.llw += totalTime;
 
         if (logDate.getMonth() === thisM && logDate.getFullYear() === now.getFullYear()) stats.tm += totalTime;
-        else if (logDate.getMonth() === lastM) stats.lm += totalTime;
+        else if (logDate.getMonth() === lastM && logDate.getFullYear() === lastMYear) stats.lm += totalTime;
 
         const d = new Date(log.date);
         const day = d.getDay();
@@ -183,6 +192,7 @@
     });
 
     const currentMonth = now.getMonth() + 1;
+    const currentDate = now.getDate();
     let percent, goalLabel, gradeAiText;
 
     if (currentMonth === 4) {
@@ -192,14 +202,23 @@
       document.getElementById('progress-bar').innerText = "蓄積中";
       gradeAiText = "今はみんなの学習パワーを貯めている期間だよ！4月の最後にみんなの実績を集計して、5月の目標が決まるよ。";
     } else {
-      const dynamicTarget = gradeThisMonthTotal > 0 ? Math.round(gradeThisMonthTotal * 1.1) : 30000;
+      // 目標値：先月の実績が0なら30000分、あればその1.1倍を目標にする
+      const baseForTarget = (currentDate <= 10 && gradeLastMonthTotal > 0) ? gradeLastMonthTotal : gradeThisMonthTotal;
+      const dynamicTarget = baseForTarget > 0 ? Math.round(baseForTarget * 1.1) : 30000;
+      
       percent = Math.min(100, Math.round((gradeThisMonthTotal / dynamicTarget) * 100));
       goalLabel = `今月の学年合計: ${formatMinutes(gradeThisMonthTotal)} / 目標: ${formatMinutes(dynamicTarget)}`;
       document.getElementById('progress-bar').innerText = percent + '%';
       
-      if (percent >= 100) gradeAiText = "目標達成おめでとう！みんなの力が合わさって、最高の結果になったね！";
-      else if (percent >= 70) gradeAiText = "目標まであと少し！みんなの「ちょっとした頑張り」が集まれば必ず届くよ！";
-      else gradeAiText = "今月もみんなでコツコツ積み上げているね。ぼくも一緒に応援しているよ！";
+      // 10日間の猶予期間メッセージ
+      if (currentDate <= 10) {
+        const lastMonthName = lastM + 1;
+        gradeAiText = `${lastMonthName}月はお疲れ様！学年合計は${formatMinutes(gradeLastMonthTotal)}だったよ。すごいね！\n今月（${currentMonth}月）の目安は${formatMinutes(dynamicTarget)}だよ。ぼくと一緒にまた積み上げていこう！`;
+      } else {
+        if (percent >= 100) gradeAiText = "目標達成おめでとう！みんなの力が合わさって、最高の結果になったね！";
+        else if (percent >= 70) gradeAiText = "目標まであと少し！みんなの「ちょっとした頑張り」が集まれば必ず届くよ！";
+        else gradeAiText = "今月もみんなでコツコツ積み上げているね。ぼくも一緒に応援しているよ！";
+      }
     }
 
     document.getElementById('progress-bar').style.width = percent + '%';
