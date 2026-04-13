@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>学習入力（金〜木サイクル）</title>
+    <title>学習入力（3タブ版）</title>
     <style>
-        /* スタイルは以前の使いやすいものをそのまま維持 */
         body { font-family: sans-serif; background-color: #fffbe6; padding: 20px; text-align: center; margin: 0; }
-        .container { background: white; padding: 20px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { background: white; padding: 20px; border-radius: 20px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
-        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .tab-btn { flex: 1; padding: 10px 5px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
         .tab-btn.active { background: #fff; color: #d35400; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 20px; margin-bottom: 15px; text-align: left; position: relative; }
-        .card h3 { margin-top: 0; color: #d35400; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        .fri-badge { display: none; background: #e74c3c; color: white; font-size: 11px; padding: 3px 8px; border-radius: 5px; position: absolute; top: -10px; right: 10px; animation: bounce 1s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        .row { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
-        .input-group { display: flex; align-items: center; gap: 5px; }
-        input[type="number"] { width: 60px; padding: 10px; border: 2px solid #f39c12; border-radius: 8px; text-align: center; font-size: 18px; }
+        
+        .card { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 15px; margin-bottom: 15px; text-align: left; position: relative; }
+        .card h3 { margin-top: 0; color: #d35400; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        .row { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
+        .input-group { display: flex; align-items: center; gap: 3px; }
+        input[type="number"] { width: 50px; padding: 8px; border: 2px solid #f39c12; border-radius: 8px; text-align: center; font-size: 16px; }
         input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; width: 100%; box-sizing: border-box; }
-        .help-text { font-size: 12px; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
+        
+        /* 1日ずつ入力用の小分けスタイル */
+        .day-input-row { border-bottom: 1px dashed #ddd; padding: 10px 0; }
+        .day-label { font-weight: bold; color: #2c3e50; min-width: 80px; display: inline-block; }
+
         .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
         .btn-back { margin-top: 15px; background: none; border: none; text-decoration: underline; cursor: pointer; color: #7f8c8d; font-size: 14px; }
     </style>
@@ -31,7 +34,8 @@
     
     <div class="tab-menu">
         <button id="btn-day" class="tab-btn active" onclick="switchMode('day')">1日分</button>
-        <button id="btn-week" class="tab-btn" onclick="switchMode('week')">1週間分まとめ</button>
+        <button id="btn-list" class="tab-btn" onclick="switchMode('list')">1週間(1日ずつ)</button>
+        <button id="btn-week" class="tab-btn" onclick="switchMode('week')">1週間(まとめて)</button>
     </div>
 
     <div id="area-day">
@@ -41,22 +45,29 @@
         </div>
         <div class="card">
             <h3>⏰ 時間</h3>
-            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ds-h" min="0">時<input type="number" id="ds-m" min="0">分</div></div>
-            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="df-h" min="0">時<input type="number" id="df-m" min="0">分</div></div>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ds-h">時<input type="number" id="ds-m">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="df-h">時<input type="number" id="df-m">分</div></div>
         </div>
+    </div>
+
+    <div id="area-list" style="display:none;">
+        <div class="card">
+            <h3>📅 週の始まり(金曜日)を選択</h3>
+            <input type="date" id="date-list-start">
+        </div>
+        <div id="list-inputs">
+            </div>
     </div>
 
     <div id="area-week" style="display:none;">
         <div class="card">
-            <div id="fri-msg" class="fri-badge">金曜日だね！新しい計画の始まり✨</div>
-            <h3>📅 何週目？（金曜始まり）</h3>
+            <h3>📅 何週目のまとめ？(金曜〜)</h3>
             <input type="date" id="date-week">
-            <p id="week-guide" class="help-text" style="color:#d35400; font-weight:bold;"></p>
         </div>
         <div class="card">
             <h3>⏰ 1週間の「合計」</h3>
-            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ws-h" min="0">時<input type="number" id="ws-m" min="0">分</div></div>
-            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="wf-h" min="0">時<input type="number" id="wf-m" min="0">分</div></div>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ws-h">時<input type="number" id="ws-m">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="wf-h">時<input type="number" id="wf-m">分</div></div>
         </div>
     </div>
 
@@ -83,79 +94,94 @@
     const myName = params.get('name'), myClass = params.get('class');
     document.getElementById('user-info').innerText = myName + " さんの入力";
 
-    const now = new Date();
-    document.getElementById('date-day').value = now.toISOString().split('T')[0];
-
-    // 【修正】直近の金曜日を計算する関数
+    // 日付初期設定
     function getRecentFriday(d) {
-        const day = d.getDay(); // 0:日, 1:月, 2:火, 3:水, 4:木, 5:金, 6:土
-        // 今日の曜日から見て、一番近い過去（または今日）の金曜日(5)を出す
+        const day = d.getDay();
         let diff = day >= 5 ? day - 5 : day + 2; 
         const result = new Date(d);
         result.setDate(d.getDate() - diff);
         return result;
     }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const fridayStr = getRecentFriday(new Date()).toISOString().split('T')[0];
     
-    const friday = getRecentFriday(new Date());
-    document.getElementById('date-week').value = friday.toISOString().split('T')[0];
+    document.getElementById('date-day').value = todayStr;
+    document.getElementById('date-week').value = fridayStr;
+    document.getElementById('date-list-start').value = fridayStr;
 
-    if(now.getDay() === 5) {
-        document.getElementById('fri-msg').style.display = 'block';
-    }
+    // 1日ずつリストの生成
+    function renderListInputs() {
+        const start = new Date(document.getElementById('date-list-start').value);
+        const container = document.getElementById('list-inputs');
+        container.innerHTML = '';
+        const weekDays = ['日','月','火','水','木','金','土'];
 
-    // 【修正】1週間ガイドを 金〜木 に変更
-    function updateWeekGuide() {
-        const d = new Date(document.getElementById('date-week').value);
-        const end = new Date(d); end.setDate(d.getDate() + 6); // 金曜から数えて6日後は木曜
-        document.getElementById('week-guide').innerText = `金曜 ${d.getMonth()+1}/${d.getDate()} 〜 木曜 ${end.getMonth()+1}/${end.getDate()} の分`;
+        for(let i=0; i<7; i++) {
+            const d = new Date(start); d.setDate(start.getDate() + i);
+            const dStr = d.toISOString().split('T')[0];
+            const label = `${d.getMonth()+1}/${d.getDate()}(${weekDays[d.getDay()]})`;
+            
+            container.innerHTML += `
+                <div class="card day-input-row" data-date="${dStr}">
+                    <span class="day-label">${label}</span>
+                    <div class="row">
+                        <span>🏫</span> <input type="number" class="ls-h" placeholder="時">:<input type="number" class="ls-m" placeholder="分">
+                        <span>🏠</span> <input type="number" class="lf-h" placeholder="時">:<input type="number" class="lf-m" placeholder="分">
+                    </div>
+                </div>`;
+        }
     }
-    document.getElementById('date-week').onchange = updateWeekGuide;
-    updateWeekGuide();
+    document.getElementById('date-list-start').onchange = renderListInputs;
+    renderListInputs();
 
     let mode = 'day';
     window.switchMode = (m) => {
         mode = m;
         document.getElementById('btn-day').classList.toggle('active', m==='day');
+        document.getElementById('btn-list').classList.toggle('active', m==='list');
         document.getElementById('btn-week').classList.toggle('active', m==='week');
         document.getElementById('area-day').style.display = m==='day'?'block':'none';
+        document.getElementById('area-list').style.display = m==='list'?'block':'none';
         document.getElementById('area-week').style.display = m==='week'?'block':'none';
     };
 
     document.getElementById('send-btn').onclick = async () => {
         const btn = document.getElementById('send-btn');
-        let h, m, fh, fm, date;
-        
-        if(mode === 'day'){
-            h = parseInt(document.getElementById('ds-h').value)||0; m = parseInt(document.getElementById('ds-m').value)||0;
-            fh = parseInt(document.getElementById('df-h').value)||0; fm = parseInt(document.getElementById('df-m').value)||0;
-            date = document.getElementById('date-day').value;
-        } else {
-            h = parseInt(document.getElementById('ws-h').value)||0; m = parseInt(document.getElementById('ws-m').value)||0;
-            fh = parseInt(document.getElementById('wf-h').value)||0; fm = parseInt(document.getElementById('wf-m').value)||0;
-            date = document.getElementById('date-week').value;
-        }
-        
-        if(h+m+fh+fm === 0) { alert("時間をいれてね！"); return; }
         btn.disabled = true;
-        
-        // IDに「モード（day/week）」と「日付」を入れることで、金〜木のまとめも上書き可能に
-        const docId = `${myName}_${mode}_${date}`;
 
         try {
-            await setDoc(doc(db, "learning_logs", docId), {
-                name: myName, 
-                class: myClass, 
-                school: h*60+m, 
-                self: fh*60+fm, 
-                date: date, 
-                mode: mode, 
-                timestamp: serverTimestamp()
-            });
+            if (mode === 'day') {
+                const h = parseInt(document.getElementById('ds-h').value)||0, m = parseInt(document.getElementById('ds-m').value)||0;
+                const fh = parseInt(document.getElementById('df-h').value)||0, fm = parseInt(document.getElementById('df-m').value)||0;
+                const date = document.getElementById('date-day').value;
+                await setDoc(doc(db, "learning_logs", `${myName}_day_${date}`), {
+                    name: myName, class: myClass, school: h*60+m, self: fh*60+fm, date: date, mode: 'day', timestamp: serverTimestamp()
+                });
+            } else if (mode === 'week') {
+                const h = parseInt(document.getElementById('ws-h').value)||0, m = parseInt(document.getElementById('ws-m').value)||0;
+                const fh = parseInt(document.getElementById('wf-h').value)||0, fm = parseInt(document.getElementById('wf-m').value)||0;
+                const date = document.getElementById('date-week').value;
+                await setDoc(doc(db, "learning_logs", `${myName}_week_${date}`), {
+                    name: myName, class: myClass, school: h*60+m, self: fh*60+fm, date: date, mode: 'week', timestamp: serverTimestamp()
+                });
+            } else if (mode === 'list') {
+                const rows = document.querySelectorAll('.day-input-row');
+                for (let row of rows) {
+                    const date = row.getAttribute('data-date');
+                    const h = parseInt(row.querySelector('.ls-h').value)||0, m = parseInt(row.querySelector('.ls-m').value)||0;
+                    const fh = parseInt(row.querySelector('.lf-h').value)||0, fm = parseInt(row.querySelector('.lf-m').value)||0;
+                    if(h+m+fh+fm > 0) { // 0分以外のみ保存
+                        await setDoc(doc(db, "learning_logs", `${myName}_day_${date}`), {
+                            name: myName, class: myClass, school: h*60+m, self: fh*60+fm, date: date, mode: 'day', timestamp: serverTimestamp()
+                        });
+                    }
+                }
+            }
             alert("送信しました！");
             location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
-        } catch (e) { 
-            alert("エラーです: " + e); 
-            btn.disabled = false; 
+        } catch (e) {
+            alert("エラー:" + e); btn.disabled = false;
         }
     };
 </script>
