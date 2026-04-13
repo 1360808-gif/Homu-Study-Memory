@@ -3,53 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学習入力ダッシュボード</title>
+<title>学習ダッシュボード</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
-  .app-container { background: #fff; width: 95%; max-width: 500px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; text-align: center; }
-  h1 { font-size: 24px; color: #2c3e50; }
-  .user-info { font-size: 18px; margin-bottom: 20px; font-weight: bold; color: #3498db; }
+  .app-container { background: #fff; width: 95%; max-width: 600px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; text-align: center; }
+  h1 { font-size: 22px; color: #2c3e50; margin-bottom: 5px; }
+  h2 { font-size: 18px; color: #34495e; margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
   
-  .input-group { margin-bottom: 20px; text-align: left; }
-  label { display: block; margin-bottom: 8px; font-weight: bold; }
-  input[type="number"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 18px; box-sizing: border-box; }
+  /* 二つ名とAIアドバイス */
+  .title-badge { background: #6c5ce7; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; display: inline-block; margin-top: 10px; }
+  .ai-message-area { background: linear-gradient(135deg, #e0f7fa, #ffffff); border: 2px solid #4fc3f7; border-radius: 15px; padding: 15px; margin: 15px 0 10px 0; display: flex; align-items: center; gap: 15px; text-align: left; }
+  .ai-icon { font-size: 40px; }
+  .ai-text { font-size: 14px; font-weight: bold; color: #0277bd; line-height: 1.4; }
+  .ai-stats { font-size: 11px; color: #546e7a; margin-top: 5px; }
+
+  /* アクションボタン（入力・分析） */
+  .button-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px 0; }
+  .btn-record { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3); transition: 0.2s; }
+  .btn-analysis { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #3498db, #2980b9); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); transition: 0.2s; }
+  .btn-record:active, .btn-analysis:active { transform: scale(0.97); }
+
+  .section { background-color: #fdfdfd; border: 1px solid #ecf0f1; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
+  .global-filter { display: flex; justify-content: space-around; background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 2px solid #fdcb6e; }
   
-  .btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; border: none; border-radius: 12px; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
-  .btn-submit { background-color: #27ae60; }
-  .btn-submit:hover { background-color: #2ecc71; }
-  .btn-analysis { background-color: #3498db; }
+  .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; position: relative; overflow: hidden; }
+  .progress-bar { background: linear-gradient(90deg, #f1c40f, #f39c12); height: 100%; width: 0%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; transition: width 0.5s ease; }
+  .chart-container { position: relative; height: 250px; width: 100%; }
   
-  .status-msg { margin-top: 15px; padding: 10px; border-radius: 8px; display: none; }
-  .success { background-color: #d4edda; color: #155724; display: block; }
+  .teacher-section { background-color: #eee; border: 2px dashed #bdc3c7; border-radius: 10px; padding: 10px; margin-bottom: 20px; text-align: left; font-size: 11px; }
+  .nav-btn-bottom { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px;}
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>✏️ がんばり入力</h1>
-  <div class="user-info" id="user-display">読み込み中...</div>
+  <span id="user-title" class="title-badge">かけだしの学習者</span>
+  <h1>🏠 <span id="user-name-display">ゲスト</span></h1>
 
-  <div class="input-group">
-    <label>🏫 がっこうで 勉強した時間（分）</label>
-    <input type="number" id="school-time" placeholder="0" min="0">
+  <div class="ai-message-area">
+    <div class="ai-icon" id="ai-icon">🤖</div>
+    <div class="ai-content">
+        <div class="ai-text" id="ai-comment">データを読み込み中...</div>
+        <div class="ai-stats" id="ai-stats"></div>
+    </div>
   </div>
 
-  <div class="input-group">
-    <label>🏠 じぶんで 勉強した時間（分）</label>
-    <input type="number" id="self-time" placeholder="0" min="0">
+  <div class="button-group">
+    <button class="btn-record" onclick="goToInput()">✏️ 学習時間をきろくする</button>
+    <button class="btn-analysis" onclick="goToAnalysis()">📊 みんなの分析・順位</button>
   </div>
 
-  <button class="btn btn-submit" onclick="saveData()">🚀 データを送る（上書き）</button>
-  <div id="status" class="status-msg"></div>
+  <div class="global-filter">
+    <label><input type="radio" name="viewType" value="all" checked> ぜんぶ</label>
+    <label><input type="radio" name="viewType" value="school"> がっこう</label>
+    <label><input type="radio" name="viewType" value="self"> じぶん</label>
+  </div>
+  
+  <div class="teacher-section">
+    👨‍🏫 人数調整: 1組:<input type="number" id="ex-1" value="30" style="width:30px">人 2組:<input type="number" id="ex-2" value="30" style="width:30px">人 3組:<input type="number" id="ex-3" value="30" style="width:30px">人
+  </div>
 
-  <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+  <div class="section">
+    <h2 id="goal-title">🤝 みんなで達成しよう！</h2>
+    <p id="goal-text" style="font-weight:bold; color:#e67e22; margin-bottom:10px;">目標読み込み中...</p>
+    <div class="progress-bg"><div class="progress-bar" id="progress-bar">0%</div></div>
+  </div>
 
-  <button class="btn btn-analysis" onclick="goToAnalysis()">📊 みんなの分析を見る</button>
+  <div class="section">
+    <h2>🔥 クラス平均（1人あたり）</h2>
+    <div class="chart-container"><canvas id="classChart"></canvas></div>
+  </div>
+
+  <div class="section">
+    <h2>👤 あなたの履歴（直近10件）</h2>
+    <div class="chart-container"><canvas id="personalChart"></canvas></div>
+  </div>
+
+  <button class="nav-btn-bottom" style="background-color: #3498db;" onclick="goToAnalysis()">📊 みんなの分析・順位をみる</button>
+  <button class="nav-btn-bottom" style="background-color: #f39c12;" onclick="goToInput()">✏️ 学習時間を入力する</button>
+  <button class="nav-btn-bottom" style="background-color: #95a5a6; margin-top: 20px;" onclick="location.href='index.html'">🚪 ログアウト</button>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -62,46 +100,112 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-
   const params = new URLSearchParams(window.location.search);
-  const myName = params.get('name') || "ゲスト";
-  document.getElementById('user-display').innerText = `こんにちは、${myName} さん`;
+  const myName = params.get('name') || "ゲスト", myClass = params.get('class') || "1";
+  document.getElementById('user-name-display').innerText = `${myClass}組 ${myName} さん`;
 
-  window.saveData = async function() {
-    const schoolTime = document.getElementById('school-time').value || 0;
-    const selfTime = document.getElementById('self-time').value || 0;
-    const status = document.getElementById('status');
+  let cachedLogs = [];
+  const classCtx = document.getElementById('classChart').getContext('2d');
+  let classChart = new Chart(classCtx, {
+    type: 'bar',
+    data: { labels: ['1組', '2組', '3組'], datasets: [{ label: '学校', data:[0,0,0], backgroundColor:'#2980b9'}, {label:'自分', data:[0,0,0], backgroundColor:'#c0392b'}]},
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+  });
 
-    // 今日の日付を取得 (YYYY-MM-DD 形式)
+  const personalCtx = document.getElementById('personalChart').getContext('2d');
+  let personalChart = new Chart(personalCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: '学校', data:[], borderColor:'#2980b9', fill:false}, {label:'自分', data:[], borderColor:'#c0392b', fill:false}]},
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  onSnapshot(query(collection(db, "learning_logs"), orderBy("date", "asc")), (snapshot) => {
+    cachedLogs = [];
+    snapshot.forEach(doc => cachedLogs.push(doc.data()));
+    render();
+  });
+
+  function render() {
+    const filter = document.querySelector('input[name="viewType"]:checked').value;
+    const denoms = { "1": Number(document.getElementById('ex-1').value)||1, "2": Number(document.getElementById('ex-2').value)||1, "3": Number(document.getElementById('ex-3').value)||1 };
+    
+    let classTotals = { "1": {s:0, f:0}, "2": {s:0, f:0}, "3": {s:0, f:0} };
+    let myData = { labels: [], s: [], f: [] };
+    let grandTotal = 0;
+
+    // 分析用データ（週・月）
     const now = new Date();
-    const dateStr = now.getFullYear() + "-" + 
-                    ("0" + (now.getMonth() + 1)).slice(-2) + "-" + 
-                    ("0" + now.getDate()).slice(-2);
+    const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
+    const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
+    const thisM = now.getMonth();
+    const lastM = (thisM === 0) ? 11 : thisM - 1;
+    let stats = { tw:0, lw:0, tm:0, lm:0 };
 
-    // 【重要】ドキュメントIDを「名前_日付」に設定することで同じ日は上書きされる
-    const docId = `${myName}_${dateStr}`;
+    cachedLogs.forEach(log => {
+      const isMine = log.name === myName;
+      const d = new Date(log.date);
 
-    try {
-      await setDoc(doc(db, "learning_logs", docId), {
-        name: myName,
-        date: dateStr,
-        school: Number(schoolTime),
-        self: Number(selfTime),
-        updatedAt: new Date() // いつ更新したか記録
-      });
+      if (isMine) {
+        if (d >= sun) stats.tw += (log.school + log.self);
+        else if (d >= lastSun && d < sun) stats.lw += (log.school + log.self);
+        if (d.getMonth() === thisM && d.getFullYear() === now.getFullYear()) stats.tm += (log.school + log.self);
+        else if (d.getMonth() === lastM) stats.lm += (log.school + log.self);
+        
+        myData.labels.push(log.date);
+        myData.s.push(log.school);
+        myData.f.push(log.self);
+      }
 
-      status.innerText = "✅ ほぞんしました！(まちがいは上書きされたよ)";
-      status.className = "status-msg success";
-      
-      // 入力欄をクリアしない（今の数字を残して、あとで微調整しやすくする）
-    } catch (e) {
-      alert("エラーが起きました: " + e);
+      if (classTotals[log.class]) { classTotals[log.class].s += log.school; classTotals[log.class].f += log.self; }
+      grandTotal += (filter === 'all' ? (log.school + log.self) : (filter === 'school' ? log.school : log.self));
+    });
+
+    // UI更新
+    updateAI(stats, myData);
+    
+    const target = 30000;
+    const percent = Math.min(100, Math.round((grandTotal / target) * 100));
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-bar').innerText = percent + '%';
+    document.getElementById('goal-text').innerText = `学年合計: ${grandTotal}分 (目標まであと ${Math.max(0, target - grandTotal)}分)`;
+
+    classChart.data.datasets[0].data = [classTotals["1"].s/denoms["1"], classTotals["2"].s/denoms["2"], classTotals["3"].s/denoms["3"]];
+    classChart.data.datasets[1].data = [classTotals["1"].f/denoms["1"], classTotals["2"].f/denoms["2"], classTotals["3"].f/denoms["3"]];
+    classChart.update();
+
+    personalChart.data.labels = myData.labels.slice(-10);
+    personalChart.data.datasets[0].data = myData.s.slice(-10);
+    personalChart.data.datasets[1].data = myData.f.slice(-10);
+    personalChart.update();
+  }
+
+  function updateAI(stats, myData) {
+    const aiText = document.getElementById('ai-comment');
+    const aiStats = document.getElementById('ai-stats');
+    const aiIcon = document.getElementById('ai-icon');
+    const userTitle = document.getElementById('user-title');
+
+    // 二つ名
+    let title = "かけだしの学習者";
+    if (myData.s.length > 10) title = "きろくの達人";
+    const totalS = myData.s.reduce((a,b)=>a+b,0), totalF = myData.f.reduce((a,b)=>a+b,0);
+    if (totalF > totalS * 1.5) title = "じしゅうの鬼";
+    userTitle.innerText = title;
+
+    // アドバイス
+    if (stats.tw > stats.lw && stats.lw > 0) {
+      aiText.innerText = "すごい！先週よりペースが上がっているよ！"; aiIcon.innerText = "🔥";
+    } else if (stats.tm < stats.lm && stats.tm > 0) {
+      aiText.innerText = "先月よりのんびりペースかな？ここから取り返そう！"; aiIcon.innerText = "🐢";
+    } else {
+      aiText.innerText = "きみの頑張りをしっかり見守っているよ！"; aiIcon.innerText = "🤖";
     }
-  };
+    aiStats.innerHTML = `今週:${stats.tw}分 (先週:${stats.lw}分) / 今月:${stats.tm}分 (先月:${stats.lm}分)`;
+  }
 
-  window.goToAnalysis = function() {
-    location.href = `analysis.html?name=${encodeURIComponent(myName)}`;
-  };
+  window.goToInput = () => location.href = `input.html${window.location.search}`;
+  window.goToAnalysis = () => location.href = `analysis.html${window.location.search}`;
+  document.querySelectorAll('input').forEach(el => el.addEventListener('change', render));
 </script>
 </body>
 </html>
