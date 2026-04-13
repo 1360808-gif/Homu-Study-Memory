@@ -1,112 +1,160 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>がんばり入力 - 学習アプリ</title>
-<style>
-  body { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f0f8ff; color: #333; display: flex; justify-content: center; padding: 20px 0; margin: 0; }
-  .app-container { background: #fff; width: 95%; max-width: 500px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 30px; text-align: center; }
-  
-  h1 { font-size: 24px; color: #2c3e50; margin-bottom: 10px; }
-  .user-info { font-size: 18px; margin-bottom: 25px; font-weight: bold; color: #3498db; }
-  
-  .input-card { background-color: #f9f9f9; padding: 20px; border-radius: 15px; border: 1px solid #eee; margin-bottom: 20px; }
-  .input-group { margin-bottom: 25px; text-align: left; }
-  label { display: block; margin-bottom: 10px; font-weight: bold; font-size: 16px; color: #555; }
-  input[type="number"] { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 12px; font-size: 20px; box-sizing: border-box; transition: 0.3s; }
-  input[type="number"]:focus { border-color: #3498db; outline: none; background-color: #f0f7ff; }
-  
-  .btn-submit { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #27ae60, #2ecc71); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); transition: 0.2s; }
-  .btn-submit:active { transform: scale(0.98); }
-  
-  .btn-back { width: 100%; padding: 12px; font-size: 14px; font-weight: bold; color: #7f8c8d; background: none; border: none; cursor: pointer; margin-top: 15px; text-decoration: underline; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習入力</title>
+    <style>
+        body { font-family: sans-serif; background-color: #fffbe6; padding: 20px; text-align: center; margin: 0; }
+        .container { background: white; padding: 20px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .tab-btn.active { background: #fff; color: #d35400; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .card { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 20px; margin-bottom: 15px; text-align: left; position: relative; }
+        .card h3 { margin-top: 0; color: #d35400; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        .fri-badge { display: none; background: #e74c3c; color: white; font-size: 11px; padding: 3px 8px; border-radius: 5px; position: absolute; top: -10px; right: 10px; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
-  .status-msg { margin-top: 15px; padding: 10px; border-radius: 8px; display: none; font-weight: bold; }
-  .success { background-color: #d4edda; color: #155724; display: block; }
-</style>
+        .row { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
+        .input-group { display: flex; align-items: center; gap: 5px; }
+        input[type="number"] { width: 60px; padding: 10px; border: 2px solid #f39c12; border-radius: 8px; text-align: center; font-size: 18px; }
+        input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; width: 100%; box-sizing: border-box; }
+        
+        .help-text { font-size: 12px; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
+        .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
+        .btn-back { margin-top: 15px; background: none; border: none; text-decoration: underline; cursor: pointer; color: #7f8c8d; font-size: 14px; }
+    </style>
 </head>
 <body>
 
-<div class="app-container">
-  <h1>✏️ がんばり入力</h1>
-  <div class="user-info" id="user-display">こんにちは！</div>
-
-  <div class="input-card">
-    <div class="input-group">
-      <label>🏫 がっこうで 勉強した時間（分）</label>
-      <input type="number" id="school-time" placeholder="0" min="0">
+<div class="container">
+    <h2 id="user-info">読み込み中...</h2>
+    
+    <div class="tab-menu">
+        <button id="btn-day" class="tab-btn active" onclick="switchMode('day')">1日分</button>
+        <button id="btn-week" class="tab-btn" onclick="switchMode('week')">1週間分まとめ</button>
     </div>
 
-    <div class="input-group">
-      <label>🏠 じぶんの勉強（家庭学習など/分）</label>
-      <input type="number" id="self-time" placeholder="0" min="0">
+    <div id="area-day">
+        <div class="card">
+            <h3>📅 いつの分？</h3>
+            <input type="date" id="date-day">
+        </div>
+        <div class="card">
+            <h3>⏰ 時間</h3>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ds-h" min="0">時<input type="number" id="ds-m" min="0">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="df-h" min="0">時<input type="number" id="df-m" min="0">分</div></div>
+        </div>
     </div>
 
-    <button class="btn-submit" onclick="saveData()">🚀 送信する（上書き）</button>
-    <div id="status" class="status-msg"></div>
-  </div>
+    <div id="area-week" style="display:none;">
+        <div class="card">
+            <div id="fri-msg" class="fri-badge">金曜日だね！まとめよう✨</div>
+            <h3>📅 何週目？</h3>
+            <input type="date" id="date-week">
+            <p id="week-guide" class="help-text" style="color:#d35400; font-weight:bold;"></p>
+        </div>
+        <div class="card">
+            <h3>⏰ 1週間の「合計」</h3>
+            <div class="row"><span>🏫 学校</span><div class="input-group"><input type="number" id="ws-h" min="0">時<input type="number" id="ws-m" min="0">分</div></div>
+            <div class="row"><span>🏠 じぶん</span><div class="input-group"><input type="number" id="wf-h" min="0">時<input type="number" id="wf-m" min="0">分</div></div>
+        </div>
+    </div>
 
-  <button class="btn-back" onclick="history.back()">⬅️ ダッシュボードにもどる</button>
+    <button id="send-btn" class="btn-submit">送信する（上書きOK！）</button>
+    <button class="btn-back" onclick="history.back()">もどる</button>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
-    authDomain: "study-app-4215b.firebaseapp.com",
-    projectId: "study-app-4215b",
-    storageBucket: "study-app-4215b.firebasestorage.app",
-    messagingSenderId: "896254140020",
-    appId: "1:896254140020:web:cbfa61dbc4345362807b21"
-  };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
+        authDomain: "study-app-4215b.firebaseapp.com",
+        projectId: "study-app-4215b",
+        storageBucket: "study-app-4215b.firebasestorage.app",
+        messagingSenderId: "896254140020",
+        appId: "1:896254140020:web:cbfa61dbc4345362807b21"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const params = new URLSearchParams(window.location.search);
+    const myName = params.get('name'), myClass = params.get('class');
+    document.getElementById('user-info').innerText = myName + " さんの入力";
 
-  const params = new URLSearchParams(window.location.search);
-  const myName = params.get('name') || "ゲスト";
-  const myClass = params.get('class') || "1";
-  document.getElementById('user-display').innerText = `${myClass}組 ${myName} さんの記録`;
-
-  window.saveData = async function() {
-    const schoolTime = document.getElementById('school-time').value || 0;
-    const selfTime = document.getElementById('self-time').value || 0;
-    const status = document.getElementById('status');
-
-    // 今日の日付を取得 (YYYY-MM-DD)
     const now = new Date();
-    const dateStr = now.getFullYear() + "-" + 
-                    ("0" + (now.getMonth() + 1)).slice(-2) + "-" + 
-                    ("0" + now.getDate()).slice(-2);
+    document.getElementById('date-day').value = now.toISOString().split('T')[0];
 
-    // 【重要】ドキュメントIDを「名前_日付」に固定
-    const docId = `${myName}_${dateStr}`;
-
-    try {
-      await setDoc(doc(db, "learning_logs", docId), {
-        name: myName,
-        class: myClass,
-        date: dateStr,
-        school: Number(schoolTime),
-        self: Number(selfTime),
-        timestamp: new Date()
-      });
-
-      status.innerText = "✅ 保存しました！";
-      status.className = "status-msg success";
-      
-      // 2秒後に自動で戻る
-      setTimeout(() => {
-        history.back();
-      }, 1500);
-
-    } catch (e) {
-      alert("エラーが発生しました: " + e);
+    function getRecentMonday(d) {
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
     }
-  };
+    const monday = getRecentMonday(new Date());
+    document.getElementById('date-week').value = monday.toISOString().split('T')[0];
+
+    if(now.getDay() === 5) {
+        document.getElementById('fri-msg').style.display = 'block';
+    }
+
+    function updateWeekGuide() {
+        const d = new Date(document.getElementById('date-week').value);
+        const end = new Date(d); end.setDate(d.getDate() + 6);
+        document.getElementById('week-guide').innerText = `月曜 ${d.getMonth()+1}/${d.getDate()} 〜 日曜 ${end.getMonth()+1}/${end.getDate()} の分`;
+    }
+    document.getElementById('date-week').onchange = updateWeekGuide;
+    updateWeekGuide();
+
+    let mode = 'day';
+    window.switchMode = (m) => {
+        mode = m;
+        document.getElementById('btn-day').classList.toggle('active', m==='day');
+        document.getElementById('btn-week').classList.toggle('active', m==='week');
+        document.getElementById('area-day').style.display = m==='day'?'block':'none';
+        document.getElementById('area-week').style.display = m==='week'?'block':'none';
+    };
+
+    document.getElementById('send-btn').onclick = async () => {
+        const btn = document.getElementById('send-btn');
+        let h, m, fh, fm, date;
+        
+        if(mode === 'day'){
+            h = parseInt(document.getElementById('ds-h').value)||0; m = parseInt(document.getElementById('ds-m').value)||0;
+            fh = parseInt(document.getElementById('df-h').value)||0; fm = parseInt(document.getElementById('df-m').value)||0;
+            date = document.getElementById('date-day').value;
+        } else {
+            h = parseInt(document.getElementById('ws-h').value)||0; m = parseInt(document.getElementById('ws-m').value)||0;
+            fh = parseInt(document.getElementById('wf-h').value)||0; fm = parseInt(document.getElementById('wf-m').value)||0;
+            date = document.getElementById('date-week').value;
+        }
+        
+        if(h+m+fh+fm === 0) { alert("時間をいれてね！"); return; }
+        btn.disabled = true;
+        
+        // 【重要】ドキュメントIDを「名前_モード_日付」で固定。これで上書きされる。
+        const docId = `${myName}_${mode}_${date}`;
+
+        try {
+            await setDoc(doc(db, "learning_logs", docId), {
+                name: myName, 
+                class: myClass, 
+                school: h*60+m, 
+                self: fh*60+fm, 
+                date: date, 
+                mode: mode, 
+                timestamp: serverTimestamp()
+            });
+            alert("送信しました！間違えても、同じ日を選んで送り直せば上書きされるよ。");
+            location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
+        } catch (e) { 
+            alert("エラーです: " + e); 
+            btn.disabled = false; 
+        }
+    };
 </script>
 </body>
 </html>
