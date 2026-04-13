@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理者総合分析画面</title>
+    <title>管理者分析ダッシュボード</title>
     <style>
         body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; color: #333; }
         .container { background: white; max-width: 900px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 40px; padding: 20px; border: 1px solid #e1e8ed; border-radius: 15px; background: #fff; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e1e8ed; border-radius: 15px; background: #fff; text-align: left; }
         h1 { text-align: center; color: #2c3e50; font-size: 24px; }
-        h2 { font-size: 18px; color: #d35400; border-left: 5px solid #d35400; padding-left: 10px; margin-bottom: 20px; }
+        h2 { font-size: 18px; color: #d35400; border-left: 5px solid #d35400; padding-left: 10px; margin-bottom: 15px; }
         
+        /* 抽出フィルターのスタイル */
+        .filter-group { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 20px; font-weight: bold; }
+        .filter-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
         /* AI分析エリア */
         .ai-analysis-box { background: linear-gradient(135deg, #e3f2fd, #ffffff); border: 2px solid #2196f3; border-radius: 15px; padding: 20px; margin-bottom: 20px; }
         .ai-title { font-weight: bold; color: #1976d2; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -18,7 +22,7 @@
 
         /* テーブルスタイル */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
         th { background: #f8f9fa; color: #7f8c8d; }
         .stats-badge { padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 12px; }
         .badge-school { background: #e3f2fd; color: #1976d2; }
@@ -30,7 +34,6 @@
         .btn-save { background: #27ae60; }
         .btn-add { background: #3498db; }
         .btn-danger { background: #e74c3c; width: 100%; margin-top: 10px; }
-        
         .danger-zone { background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; }
     </style>
 </head>
@@ -42,23 +45,32 @@
     <div class="section">
         <h2>🤖 AI学級分析レポート</h2>
         <div class="ai-analysis-box" id="ai-box">
-            <div class="ai-title"><span>🔍</span> AIがデータを分析中...</div>
-            <div class="ai-report" id="ai-report">学習ログを読み込んでいます。少々お待ちください。</div>
+            <div class="ai-title"><span>🔍</span> データ分析中...</div>
+            <div class="ai-report" id="ai-report">読み込み中...</div>
         </div>
     </div>
 
     <div class="section">
         <h2>📊 児童別・学習状況スコア</h2>
+        
+        <div class="filter-group">
+            <span>表示範囲:</span>
+            <label><input type="radio" name="class-filter" value="all" checked onchange="renderStatsTable()"> 学年全体</label>
+            <label><input type="radio" name="class-filter" value="1" onchange="renderStatsTable()"> 1組</label>
+            <label><input type="radio" name="class-filter" value="2" onchange="renderStatsTable()"> 2組</label>
+            <label><input type="radio" name="class-filter" value="3" onchange="renderStatsTable()"> 3組</label>
+        </div>
+
         <div style="max-height: 400px; overflow-y: auto;">
             <table id="student-stats-table">
                 <thead>
                     <tr>
-                        <th>クラス</th>
-                        <th>名前</th>
-                        <th>合計時間</th>
+                        <th style="width:50px;">番号</th>
+                        <th style="width:120px;">名前</th>
+                        <th>合計</th>
                         <th>学校内</th>
-                        <th>じぶん学習</th>
-                        <th>最終記録日</th>
+                        <th>じぶん</th>
+                        <th>最終記録</th>
                     </tr>
                 </thead>
                 <tbody id="student-stats-body"></tbody>
@@ -78,17 +90,16 @@
             <input type="number" id="st-class" placeholder="組" style="width:40px">
             <input type="number" id="st-no" placeholder="番" style="width:40px">
             <input type="text" id="st-name" placeholder="名前" style="flex:1">
-            <button class="btn btn-add" onclick="addStudent()">児童追加</button>
+            <button class="btn btn-add" onclick="addStudent()">追加</button>
         </div>
     </div>
 
     <div class="section danger-zone">
         <h2>⚠️ データの初期化</h2>
         <label><input type="checkbox" id="check-log"> 学習ログのみ削除</label>
-        <button class="btn btn-danger" onclick="bulkDelete('learning_logs')" id="del-log" style="padding:5px; font-size:12px;">実行</button>
-        <br><br>
-        <label><input type="checkbox" id="check-all"> 名簿も含む全データ削除</label>
-        <button class="btn btn-danger" onclick="bulkDelete('all')" id="del-all" style="padding:5px; font-size:12px;">実行</button>
+        <button class="btn btn-danger" onclick="bulkDelete('learning_logs')" style="padding:5px; font-size:12px; width:auto;">実行</button>
+        <label style="margin-left:20px;"><input type="checkbox" id="check-all"> 完全初期化</label>
+        <button class="btn btn-danger" onclick="bulkDelete('all')" style="padding:5px; font-size:12px; width:auto;">実行</button>
     </div>
 
     <button style="width:100%; background:none; border:none; color:gray; text-decoration:underline; cursor:pointer;" onclick="location.href='index.html'">ログイン画面へ</button>
@@ -110,19 +121,23 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    let allStudents = [];
+    let allLogs = [];
+
     async function initAdmin() {
-        const students = await fetchColl("students");
-        const logs = await fetchColl("learning_logs");
-        const sizes = await getDoc(doc(db, "settings", "class_sizes"));
+        allStudents = await fetchColl("students");
+        allLogs = await fetchColl("learning_logs");
         
+        // 人数設定読み込み
+        const sizes = await getDoc(doc(db, "settings", "class_sizes"));
         if(sizes.exists()){
             const d = sizes.data();
-            document.getElementById('denom-1').value = d["1"];
-            document.getElementById('denom-2').value = d["2"];
-            document.getElementById('denom-3').value = d["3"];
+            document.getElementById('denom-1').value = d["1"]||30;
+            document.getElementById('denom-2').value = d["2"]||30;
+            document.getElementById('denom-3').value = d["3"]||30;
         }
 
-        analyzeData(students, logs);
+        renderStatsTable();
     }
 
     async function fetchColl(name) {
@@ -132,13 +147,18 @@
         return arr;
     }
 
-    function analyzeData(students, logs) {
+    window.renderStatsTable = function() {
+        const selectedClass = document.querySelector('input[name="class-filter"]:checked').value;
+        const tbody = document.getElementById('student-stats-body');
+        tbody.innerHTML = "";
+
+        // 1. 集計用オブジェクト作成
         let stats = {};
-        students.forEach(s => {
-            stats[s.name] = { class: s.class, school: 0, self: 0, lastDate: "-" };
+        allStudents.forEach(s => {
+            stats[s.name] = { class: s.class, no: s.no, school: 0, self: 0, lastDate: "-" };
         });
 
-        logs.forEach(l => {
+        allLogs.forEach(l => {
             if(stats[l.name]) {
                 stats[l.name].school += l.school;
                 stats[l.name].self += l.self;
@@ -146,49 +166,52 @@
             }
         });
 
-        // テーブル描画
-        const tbody = document.getElementById('student-stats-body');
-        tbody.innerHTML = "";
-        let totalSelf = 0, totalSchool = 0;
-        let activeUsers = 0;
+        // 2. 出席番号順にソート（重要：クラス -> 番号 の順）
+        let sortedNames = Object.keys(stats).sort((a, b) => {
+            if (stats[a].class !== stats[b].class) return stats[a].class - stats[b].class;
+            return stats[a].no - stats[b].no;
+        });
 
-        Object.keys(stats).forEach(name => {
+        // 3. フィルタリングして描画
+        let totalSelf = 0, totalSchool = 0, activeCount = 0;
+
+        sortedNames.forEach(name => {
             const s = stats[name];
+            // クラスフィルタ適用
+            if (selectedClass !== "all" && s.class != selectedClass) return;
+
             totalSelf += s.self; totalSchool += s.school;
-            if(s.school + s.self > 0) activeUsers++;
+            if(s.school + s.self > 0) activeCount++;
 
             tbody.innerHTML += `
                 <tr>
-                    <td>${s.class}組</td>
+                    <td>${s.class}-${s.no}</td>
                     <td><strong>${name}</strong></td>
                     <td>${s.school + s.self}分</td>
-                    <td><span class="stats-badge badge-school">${s.school}分</span></td>
-                    <td><span class="stats-badge badge-self">${s.self}分</span></td>
+                    <td><span class="stats-badge badge-school">${s.school}</span></td>
+                    <td><span class="stats-badge badge-self">${s.self}</span></td>
                     <td>${s.lastDate}</td>
                 </tr>
             `;
         });
 
-        // AI分析レポート生成
+        // 4. AIレポート（全体データに基づいて作成）
+        updateAIReport(totalSelf, totalSchool, activeCount, stats);
+    };
+
+    function updateAIReport(totalSelf, totalSchool, activeCount, stats) {
         const aiReport = document.getElementById('ai-report');
         const selfRate = Math.round((totalSelf / (totalSelf + totalSchool || 1)) * 100);
+        let advice = `【学級分析】\n全体の自学率は ${selfRate}% です。\n`;
         
-        let advice = `【学級概況】\n現在、名簿登録者のうち ${activeUsers}名 が学習を記録しています。\n学級全体の「じぶん学習」の割合は ${selfRate}% です。\n\n`;
-        
-        // 特徴的な児童の抽出
         let masters = Object.keys(stats).filter(n => stats[n].self > 500);
-        if(masters.length > 0) advice += `✨【絶好調】じぶん学習が500分を超えている児童が ${masters.length}名 います。称賛の声をかけてあげてください。\n`;
+        if(masters.length > 0) advice += `✨ 自学500分超えが ${masters.length}名 います！\n`;
         
-        let sleeping = Object.keys(stats).filter(n => stats[n].lastDate === "-" && activeUsers > 0);
-        if(sleeping.length > 0) advice += `⚠️【要フォロー】まだ一度も記録していない児童が ${sleeping.length}名 います。入力の仕方を再確認すると良いかもしれません。\n`;
-
-        advice += `\n💡【先生への提言】\n自学率が${selfRate < 30 ? "低めです。家庭での「じぶん学習」のネタを共有する時間を設けてみてはどうでしょうか？" : "順調です！自立した学習者が育っています。"}`;
-        
-        aiReport.innerText = advice;
-        document.querySelector('.ai-title').innerText = "✅ AI分析レポートが完了しました";
+        aiReport.innerText = advice + `\n💡 提言: ${selfRate < 30 ? "家庭学習の習慣化を呼びかけましょう。" : "順調な学習習慣です！"}`;
+        document.querySelector('.ai-title').innerText = "✅ AI分析完了";
     }
 
-    // --- 各種操作関数 ---
+    // --- 各種操作 ---
     window.saveClassSizes = async () => {
         const d = { "1": Number(document.getElementById('denom-1').value), "2": Number(document.getElementById('denom-2').value), "3": Number(document.getElementById('denom-3').value) };
         await setDoc(doc(db, "settings", "class_sizes"), d); alert("保存完了");
@@ -202,17 +225,14 @@
     };
 
     window.bulkDelete = async (mode) => {
-        const check = mode === 'all' ? 'check-all' : 'check-log';
-        if(!document.getElementById(check).checked) { alert("チェックボックスにチェックを入れてください"); return; }
-        if(!confirm("本当に削除しますか？")) return;
-
-        if(mode === 'all' || mode === 'learning_logs') {
-            const snap = await getDocs(collection(db, "learning_logs"));
-            for(const d of snap.docs) await deleteDoc(doc(db, "learning_logs", d.id));
-        }
-        if(mode === 'all') {
-            const snap = await getDocs(collection(db, "students"));
-            for(const d of snap.docs) await deleteDoc(doc(db, "students", d.id));
+        const id = mode === 'all' ? 'check-all' : 'check-log';
+        if(!document.getElementById(id).checked) return alert("チェックを入れてください");
+        if(!confirm("実行しますか？")) return;
+        const snap = await getDocs(collection(db, "learning_logs"));
+        for(const d of snap.docs) await deleteDoc(doc(db, "learning_logs", d.id));
+        if(mode==='all') {
+            const snap2 = await getDocs(collection(db, "students"));
+            for(const d of snap2.docs) await deleteDoc(doc(db, "students", d.id));
         }
         alert("削除完了"); location.reload();
     };
