@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>学習入力</title>
+    <title>学習入力（金〜木サイクル）</title>
     <style>
+        /* スタイルは以前の使いやすいものをそのまま維持 */
         body { font-family: sans-serif; background-color: #fffbe6; padding: 20px; text-align: center; margin: 0; }
         .container { background: white; padding: 20px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
         .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .tab-btn.active { background: #fff; color: #d35400; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        
         .card { background: #fdfaf0; border: 1px solid #f9ebea; border-radius: 15px; padding: 20px; margin-bottom: 15px; text-align: left; position: relative; }
         .card h3 { margin-top: 0; color: #d35400; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        
         .fri-badge { display: none; background: #e74c3c; color: white; font-size: 11px; padding: 3px 8px; border-radius: 5px; position: absolute; top: -10px; right: 10px; animation: bounce 1s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-
         .row { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
         .input-group { display: flex; align-items: center; gap: 5px; }
         input[type="number"] { width: 60px; padding: 10px; border: 2px solid #f39c12; border-radius: 8px; text-align: center; font-size: 18px; }
         input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; width: 100%; box-sizing: border-box; }
-        
         .help-text { font-size: 12px; color: #7f8c8d; margin-top: 5px; line-height: 1.4; }
         .btn-submit { width: 100%; padding: 18px; font-size: 18px; font-weight: bold; color: #fff; background-color: #f39c12; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; }
         .btn-back { margin-top: 15px; background: none; border: none; text-decoration: underline; cursor: pointer; color: #7f8c8d; font-size: 14px; }
@@ -51,8 +48,8 @@
 
     <div id="area-week" style="display:none;">
         <div class="card">
-            <div id="fri-msg" class="fri-badge">金曜日だね！まとめよう✨</div>
-            <h3>📅 何週目？</h3>
+            <div id="fri-msg" class="fri-badge">金曜日だね！新しい計画の始まり✨</div>
+            <h3>📅 何週目？（金曜始まり）</h3>
             <input type="date" id="date-week">
             <p id="week-guide" class="help-text" style="color:#d35400; font-weight:bold;"></p>
         </div>
@@ -63,7 +60,7 @@
         </div>
     </div>
 
-    <button id="send-btn" class="btn-submit">送信する（上書きOK！）</button>
+    <button id="send-btn" class="btn-submit">送信する！</button>
     <button class="btn-back" onclick="history.back()">もどる</button>
 </div>
 
@@ -89,22 +86,28 @@
     const now = new Date();
     document.getElementById('date-day').value = now.toISOString().split('T')[0];
 
-    function getRecentMonday(d) {
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        return new Date(d.setDate(diff));
+    // 【修正】直近の金曜日を計算する関数
+    function getRecentFriday(d) {
+        const day = d.getDay(); // 0:日, 1:月, 2:火, 3:水, 4:木, 5:金, 6:土
+        // 今日の曜日から見て、一番近い過去（または今日）の金曜日(5)を出す
+        let diff = day >= 5 ? day - 5 : day + 2; 
+        const result = new Date(d);
+        result.setDate(d.getDate() - diff);
+        return result;
     }
-    const monday = getRecentMonday(new Date());
-    document.getElementById('date-week').value = monday.toISOString().split('T')[0];
+    
+    const friday = getRecentFriday(new Date());
+    document.getElementById('date-week').value = friday.toISOString().split('T')[0];
 
     if(now.getDay() === 5) {
         document.getElementById('fri-msg').style.display = 'block';
     }
 
+    // 【修正】1週間ガイドを 金〜木 に変更
     function updateWeekGuide() {
         const d = new Date(document.getElementById('date-week').value);
-        const end = new Date(d); end.setDate(d.getDate() + 6);
-        document.getElementById('week-guide').innerText = `月曜 ${d.getMonth()+1}/${d.getDate()} 〜 日曜 ${end.getMonth()+1}/${end.getDate()} の分`;
+        const end = new Date(d); end.setDate(d.getDate() + 6); // 金曜から数えて6日後は木曜
+        document.getElementById('week-guide').innerText = `金曜 ${d.getMonth()+1}/${d.getDate()} 〜 木曜 ${end.getMonth()+1}/${end.getDate()} の分`;
     }
     document.getElementById('date-week').onchange = updateWeekGuide;
     updateWeekGuide();
@@ -135,7 +138,7 @@
         if(h+m+fh+fm === 0) { alert("時間をいれてね！"); return; }
         btn.disabled = true;
         
-        // 【重要】ドキュメントIDを「名前_モード_日付」で固定。これで上書きされる。
+        // IDに「モード（day/week）」と「日付」を入れることで、金〜木のまとめも上書き可能に
         const docId = `${myName}_${mode}_${date}`;
 
         try {
@@ -148,7 +151,7 @@
                 mode: mode, 
                 timestamp: serverTimestamp()
             });
-            alert("送信しました！間違えても、同じ日を選んで送り直せば上書きされるよ。");
+            alert("送信しました！");
             location.href = `dashboard.html?class=${myClass}&name=${encodeURIComponent(myName)}`;
         } catch (e) { 
             alert("エラーです: " + e); 
