@@ -11,22 +11,18 @@
   h1 { font-size: 22px; color: #2c3e50; margin-bottom: 5px; }
   h2 { font-size: 18px; color: #34495e; margin: 0 0 10px 0; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
   
-  /* 二つ名とAIアドバイス */
   .title-badge { background: #6c5ce7; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; display: inline-block; margin-top: 10px; }
   .ai-message-area { background: linear-gradient(135deg, #e0f7fa, #ffffff); border: 2px solid #4fc3f7; border-radius: 15px; padding: 15px; margin: 15px 0 10px 0; display: flex; align-items: center; gap: 15px; text-align: left; }
   .ai-icon { font-size: 40px; }
   .ai-text { font-size: 14px; font-weight: bold; color: #0277bd; line-height: 1.4; }
   .ai-stats { font-size: 11px; color: #546e7a; margin-top: 5px; }
 
-  /* アクションボタン（入力・分析） */
   .button-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0 25px 0; }
   .btn-record { width: 100%; padding: 18px; font-size: 20px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3); transition: 0.2s; }
   .btn-analysis { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; color: #fff; background: linear-gradient(135deg, #3498db, #2980b9); border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3); transition: 0.2s; }
-  .btn-record:active, .btn-analysis:active { transform: scale(0.97); }
 
   .section { background-color: #fdfdfd; border: 1px solid #ecf0f1; border-radius: 15px; padding: 15px; margin-bottom: 25px; }
   .global-filter { display: flex; justify-content: space-around; background-color: #ffeaa7; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 2px solid #fdcb6e; }
-  
   .progress-bg { background-color: #ecf0f1; border-radius: 10px; height: 30px; position: relative; overflow: hidden; }
   .progress-bar { background: linear-gradient(90deg, #f1c40f, #f39c12); height: 100%; width: 0%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; transition: width 0.5s ease; }
   .chart-container { position: relative; height: 250px; width: 100%; }
@@ -115,7 +111,7 @@
   const personalCtx = document.getElementById('personalChart').getContext('2d');
   let personalChart = new Chart(personalCtx, {
     type: 'line',
-    data: { labels: [], datasets: [{ label: '学校', data:[], borderColor:'#2980b9', fill:false}, {label:'自分', data:[], borderColor:'#c0392b', fill:false}]},
+    data: { labels: [], datasets: [{ label: '学校', data:[], borderColor:'#2980b9', fill:false, tension:0.3}, {label:'自分', data:[], borderColor:'#c0392b', fill:false, tension:0.3}]},
     options: { responsive: true, maintainAspectRatio: false }
   });
 
@@ -133,7 +129,6 @@
     let myData = { labels: [], s: [], f: [] };
     let grandTotal = 0;
 
-    // 分析用データ（週・月）
     const now = new Date();
     const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); sun.setHours(0,0,0,0);
     const lastSun = new Date(sun); lastSun.setDate(sun.getDate() - 7);
@@ -160,7 +155,6 @@
       grandTotal += (filter === 'all' ? (log.school + log.self) : (filter === 'school' ? log.school : log.self));
     });
 
-    // UI更新
     updateAI(stats, myData);
     
     const target = 30000;
@@ -185,14 +179,12 @@
     const aiIcon = document.getElementById('ai-icon');
     const userTitle = document.getElementById('user-title');
 
-    // 二つ名
     let title = "かけだしの学習者";
     if (myData.s.length > 10) title = "きろくの達人";
     const totalS = myData.s.reduce((a,b)=>a+b,0), totalF = myData.f.reduce((a,b)=>a+b,0);
     if (totalF > totalS * 1.5) title = "じしゅうの鬼";
     userTitle.innerText = title;
 
-    // アドバイス
     if (stats.tw > stats.lw && stats.lw > 0) {
       aiText.innerText = "すごい！先週よりペースが上がっているよ！"; aiIcon.innerText = "🔥";
     } else if (stats.tm < stats.lm && stats.tm > 0) {
