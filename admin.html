@@ -45,7 +45,16 @@
         .btn-add { background: #3498db; }
         .btn-danger { background: #e74c3c; font-size: 12px; padding: 8px; }
         .btn-reset { background: #95a5a6; font-size: 10px; padding: 5px 8px; }
-        .btn-reset:hover { background: #7f8c8d; }
+        .btn-log { background: #f39c12; font-size: 10px; padding: 5px 8px; }
+
+        /* モーダル用スタイル */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
+        .modal-content { background: white; margin: 5% auto; padding: 25px; width: 90%; max-width: 700px; border-radius: 20px; max-height: 80vh; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; right: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #7f8c8d; }
+        .log-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid #eee; }
+        .log-item:hover { background: #fdfdfd; }
+        .log-inputs { display: flex; gap: 10px; align-items: center; }
+        .log-inputs input { width: 50px; text-align: center; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
 
         .danger-zone { background: #fff5f5; border: 2px solid #feb2b2; padding: 15px; border-radius: 10px; margin-top: 20px; }
         input[type="number"], input[type="text"], select, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
@@ -119,6 +128,14 @@
         </div>
     </div>
 
+    <div id="logModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeLogModal()">&times;</span>
+            <h2 id="modal-title" style="color:#2c3e50; font-size:18px; margin-bottom:15px;">学習履歴の確認・修正</h2>
+            <div id="log-list-container"></div>
+        </div>
+    </div>
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <div class="section">
             <h2>👥 名簿登録</h2>
@@ -150,11 +167,9 @@
 
     <div class="section danger-zone">
         <h2>⚠️ データの初期化（取り消し不可）</h2>
-        <p style="font-size:12px; color:#e74c3c;">※「完全削除」を行うと、生徒が設定した8桁のパスワードもすべて消去されます。</p>
         <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
             <label><input type="checkbox" id="check-log"> ログのみ</label>
             <button class="btn btn-danger" onclick="bulkDelete('learning_logs')">ログ削除</button>
-            
             <label style="margin-left:auto;"><input type="checkbox" id="check-all"> <b>パスワード含む全データ</b></label>
             <button class="btn btn-danger" onclick="bulkDelete('all')">完全初期化</button>
         </div>
@@ -165,7 +180,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, updateDoc, deleteField, query, where } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAyAdChPr0HpgiWjqInzOemVhad82h7bnI",
@@ -185,9 +200,8 @@
     async function init() {
         const studentSnap = await getDocs(collection(db, "students"));
         allStudents = []; studentSnap.forEach(d => allStudents.push({id: d.id, ...d.data()}));
-        
         const logSnap = await getDocs(collection(db, "learning_logs"));
-        allLogs = []; logSnap.forEach(d => allLogs.push(d.data()));
+        allLogs = []; logSnap.forEach(d => allLogs.push({id: d.id, ...d.data()}));
 
         const sizes = await getDoc(doc(db, "settings", "class_sizes"));
         if(sizes.exists()){
@@ -240,40 +254,84 @@
                 <td><span class="badge badge-school">${item.school}</span></td>
                 <td><span class="badge badge-self">${item.self}</span></td>
                 <td>${item.lastDate}</td>
-                <td>
+                <td style="display:flex; gap:5px;">
+                    <button class="btn btn-log" onclick="openLogModal('${item.class}', '${item.name}')">📝履歴</button>
                     <button class="btn btn-reset" onclick="resetPassword('${item.class}', '${item.no}', '${item.name}')">🔑パス忘</button>
                 </td>
             </tr>`).join('');
     };
 
-    // パスワード（PIN）のみを削除する関数
-    window.resetPassword = async (cls, no, name) => {
-        if (!confirm(`${cls}組 ${name} さんのパスワードをリセットしますか？\n（学習記録は消えません。次回のログイン時にパスワードを再設定できます）`)) return;
+    // 履歴モーダルを開く
+    window.openLogModal = async (cls, name) => {
+        const container = document.getElementById('log-list-container');
+        document.getElementById('modal-title').innerText = `${cls}組 ${name} さんの履歴`;
+        container.innerHTML = "読み込み中...";
+        document.getElementById('logModal').style.display = 'block';
 
-        try {
-            const docId = `s_${cls}_${no}`;
-            const studentRef = doc(db, "students", docId);
-            
-            // pinフィールドを削除
-            await updateDoc(studentRef, {
-                pin: deleteField()
-            });
+        // 特定の生徒のログのみ抽出
+        const studentLogs = allLogs.filter(l => l.class == cls && l.name == name);
+        studentLogs.sort((a, b) => b.date.localeCompare(a.date)); // 新しい順
 
-            alert(`${name} さんのパスワードをリセットしました。`);
-            location.reload();
-        } catch (e) {
-            console.error(e);
-            alert("リセットに失敗しました。名簿が登録されているか確認してください。");
+        if(studentLogs.length === 0) {
+            container.innerHTML = "<p>記録がまだありません。</p>";
+            return;
         }
+
+        container.innerHTML = studentLogs.map(log => `
+            <div class="log-item">
+                <div style="font-weight:bold; color:#7f8c8d; font-size:13px;">${log.date}</div>
+                <div class="log-inputs">
+                    学:<input type="number" id="edit-school-${log.id}" value="${log.school || 0}">
+                    自:<input type="number" id="edit-self-${log.id}" value="${log.self || 0}">
+                    <button class="btn btn-save" style="padding:5px 8px; font-size:10px;" onclick="updateSingleLog('${log.id}')">保存</button>
+                    <button class="btn btn-danger" style="padding:5px 8px; font-size:10px;" onclick="deleteSingleLog('${log.id}')">削除</button>
+                </div>
+            </div>
+        `).join('');
     };
 
+    // 個別ログ修正
+    window.updateSingleLog = async (logId) => {
+        const sch = Number(document.getElementById(`edit-school-${logId}`).value);
+        const slf = Number(document.getElementById(`edit-self-${logId}`).value);
+        try {
+            await updateDoc(doc(db, "learning_logs", logId), { school: sch, self: slf });
+            alert("修正しました。反映のため再読み込みします。");
+            location.reload();
+        } catch(e) { alert("エラーが発生しました"); }
+    };
+
+    // 個別ログ削除
+    window.deleteSingleLog = async (logId) => {
+        if(!confirm("この1件の記録を削除しますか？")) return;
+        try {
+            await deleteDoc(doc(db, "learning_logs", logId));
+            alert("削除しました。");
+            location.reload();
+        } catch(e) { alert("エラーが発生しました"); }
+    };
+
+    window.closeLogModal = () => {
+        document.getElementById('logModal').style.display = 'none';
+    };
+
+    window.resetPassword = async (cls, no, name) => {
+        if (!confirm(`${name} さんのパスワードをリセットしますか？`)) return;
+        try {
+            await updateDoc(doc(db, "students", `s_${cls}_${no}`), { pin: deleteField() });
+            alert("リセットしました。");
+            location.reload();
+        } catch (e) { alert("失敗しました。"); }
+    };
+
+    // その他既存の関数 (updateSummary, addStudentsBulk, bulkDelete, toggleInputMode, saveClassSizes)
     function updateSummary(thisMonthTotal) {
-        const targetMin = 30000; // 仮の目標
+        const targetMin = 30000;
         const percent = Math.min(100, Math.round((thisMonthTotal / targetMin) * 100));
         document.getElementById('sm-total-time').innerText = thisMonthTotal + "分";
         document.getElementById('sm-progress-bar').style.width = percent + '%';
         document.getElementById('sm-percent').innerText = `達成率: ${percent}%`;
-        document.getElementById('ai-report').innerText = `今月の合計学習時間は ${thisMonthTotal} 分です。目標まであと ${targetMin - thisMonthTotal} 分です。`;
+        document.getElementById('ai-report').innerText = `今月の合計学習時間は ${thisMonthTotal} 分です。`;
         document.getElementById('ai-title').innerText = "✅ システム稼働中";
     }
 
@@ -281,7 +339,6 @@
         const classVal = document.getElementById('bulk-class-select').value;
         const rawInput = document.getElementById('bulk-input').value.trim();
         if (!classVal || !rawInput) return alert("入力不足です");
-
         const lines = rawInput.split(/\r?\n/);
         for (let line of lines) {
             const match = line.trim().match(/^(\d+)[\t\s]+(.+)$/);
@@ -296,18 +353,13 @@
 
     window.bulkDelete = async (m) => {
         const id = m === 'all' ? 'check-all' : 'check-log';
-        if(!document.getElementById(id).checked) return alert("チェックボックスにチェックを入れてください");
-        if(!confirm("本当に削除しますか？")) return;
-
+        if(!document.getElementById(id).checked) return alert("チェックを入れてください");
+        if(!confirm("本当に実行しますか？")) return;
         const s1 = await getDocs(collection(db, "learning_logs"));
         for(const d of s1.docs) await deleteDoc(doc(db, "learning_logs", d.id));
-
         if(m === 'all') {
             const s2 = await getDocs(collection(db, "students"));
             for(const d of s2.docs) await deleteDoc(doc(db, "students", d.id));
-            alert("パスワードを含むすべてのデータを削除しました。名簿を再登録してください。");
-        } else {
-            alert("学習ログのみ削除しました。");
         }
         location.reload();
     };
